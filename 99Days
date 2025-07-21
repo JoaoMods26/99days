@@ -1,0 +1,268 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local gui = player:WaitForChild("PlayerGui")
+local mouse = player:GetMouse()
+
+-- Crear GUI principal
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ItemsViewer"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = gui
+
+-- Función para hacer frames dragables (PC y móvil)
+local function makeDraggable(frame)
+	local dragging, dragInput, dragStart, startPos
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+end
+
+-- Frame principal
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 430)
+mainFrame.Position = UDim2.new(0, 30, 0.5, -215)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame)
+makeDraggable(mainFrame)
+
+
+-- Título "Jmods 99"
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 25)
+titleLabel.Position = UDim2.new(0, 0, 0, -28) -- Aparece justo encima del mainFrame
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "Jmods 99"
+titleLabel.TextColor3 = Color3.fromRGB(0, 0, 225) -- Letras negras
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextScaled = true
+titleLabel.Parent = mainFrame
+
+
+-- Minimizar botón
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
+minimizeBtn.Position = UDim2.new(1, -30, 0, 5)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.Parent = mainFrame
+Instance.new("UICorner", minimizeBtn)
+
+-- Botón flotante para restaurar
+local floatButton = Instance.new("TextButton")
+floatButton.Size = UDim2.new(0, 60, 0, 30)
+floatButton.Position = UDim2.new(0, 20, 0.5, -15)
+floatButton.Text = "Mostrar"
+floatButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+floatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+floatButton.Visible = false
+floatButton.Parent = screenGui
+Instance.new("UICorner", floatButton)
+makeDraggable(floatButton)
+
+-- Barra de búsqueda
+
+local searchBox = Instance.new("TextBox")
+searchBox.PlaceholderText = "Buscar..."  -- Muestra un texto guía, pero no texto escrito
+searchBox.Text = ""  -- <- Esto evita que se muestre "TextBox"
+searchBox.Size = UDim2.new(1, -40, 0, 30)
+searchBox.Position = UDim2.new(0, 5, 0, 5)
+searchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+searchBox.ClearTextOnFocus = false
+searchBox.Parent = mainFrame
+Instance.new("UICorner", searchBox)
+
+
+-- ScrollFrame
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -10, 1, -45)
+scrollFrame.Position = UDim2.new(0, 5, 0, 40)
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.Parent = mainFrame
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 4)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = scrollFrame
+
+-- Popup "Ir" y "Traer"
+local popupFrame = Instance.new("Frame")
+popupFrame.Size = UDim2.new(0, 100, 0, 50)
+popupFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+popupFrame.Visible = false
+popupFrame.ZIndex = 10
+popupFrame.Parent = screenGui
+Instance.new("UICorner", popupFrame)
+
+local goBtn = Instance.new("TextButton")
+goBtn.Size = UDim2.new(0.5, -2, 1, -4)
+goBtn.Position = UDim2.new(0, 2, 0, 2)
+goBtn.Text = "Ir"
+goBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+goBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+goBtn.ZIndex = 11
+goBtn.Parent = popupFrame
+Instance.new("UICorner", goBtn)
+
+local bringBtn = Instance.new("TextButton")
+bringBtn.Size = UDim2.new(0.5, -2, 1, -4)
+bringBtn.Position = UDim2.new(0.5, 2, 0, 2)
+bringBtn.Text = "Traer"
+bringBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+bringBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+bringBtn.ZIndex = 11
+bringBtn.Parent = popupFrame
+Instance.new("UICorner", bringBtn)
+
+local hoveredItem = nil
+
+local function getItemPart(item)
+	if item:IsA("Model") then
+		return item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart")
+	elseif item:IsA("BasePart") then
+		return item
+	end
+	return nil
+end
+
+local function showPopup(itemButton, item)
+	hoveredItem = item
+	local absPos = itemButton.AbsolutePosition
+	popupFrame.Position = UDim2.new(0, absPos.X + itemButton.AbsoluteSize.X + 5, 0, absPos.Y)
+	popupFrame.Visible = true
+end
+
+local function hidePopup()
+	popupFrame.Visible = false
+	hoveredItem = nil
+end
+
+local function createItemButton(item)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -10, 0, 30)
+	btn.Text = item.Name
+	btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.BorderSizePixel = 0
+	btn.ZIndex = 9
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	btn.Parent = scrollFrame
+
+	btn.MouseButton1Click:Connect(function()
+		showPopup(btn, item)
+	end)
+end
+
+local function updateItems()
+	for _, child in ipairs(scrollFrame:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+
+	local itemsFolder = workspace:FindFirstChild("Items")
+	if not itemsFolder then return end
+
+	local filter = string.lower(searchBox.Text)
+
+	for _, item in ipairs(itemsFolder:GetChildren()) do
+		if string.find(string.lower(item.Name), filter) then
+			createItemButton(item)
+		end
+	end
+
+	task.wait()
+	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+end
+
+goBtn.MouseButton1Click:Connect(function()
+	if hoveredItem and hoveredItem:IsDescendantOf(workspace) then
+		local root = character:FindFirstChild("HumanoidRootPart")
+		local part = getItemPart(hoveredItem)
+		if root and part then
+			root.CFrame = part.CFrame + Vector3.new(0, 5, 0)
+			hidePopup()
+		end
+	end
+end)
+
+bringBtn.MouseButton1Click:Connect(function()
+	if hoveredItem and hoveredItem:IsDescendantOf(workspace) then
+		local root = character:FindFirstChild("HumanoidRootPart")
+		local part = getItemPart(hoveredItem)
+		if root and part then
+			part.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+			hidePopup()
+		end
+	end
+end)
+
+-- Cerrar popup al hacer clic fuera
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if popupFrame.Visible and not popupFrame:IsDescendantOf(gui:GetGuiObjectsAtPosition(mouse.X, mouse.Y)[1]) then
+		hidePopup()
+	end
+end)
+
+-- Minimizar
+minimizeBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	floatButton.Visible = true
+end)
+
+-- Restaurar
+floatButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = true
+	floatButton.Visible = false
+end)
+
+-- Auto-actualizar cada 2s
+task.spawn(function()
+	updateItems() -- 🔧 Esto actualiza los ítems justo al comenzar
+	while true do
+		task.wait(2)
+		updateItems()
+	end
+end)
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	updateItems()
+end)

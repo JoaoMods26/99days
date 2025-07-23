@@ -10,7 +10,7 @@ local mouse = player:GetMouse()
 
 -- Crear GUI principal
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ItemsViewer"
+screenGui.Name = "Jmods99"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = gui
 

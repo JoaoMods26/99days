@@ -1,3 +1,6 @@
+
+-- ✅ SCRIPT COMPLETO MODIFICADO CON TABS (Items y NPCs) Y BOTÓN "TRAER TODOS"
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
@@ -11,7 +14,7 @@ screenGui.Name = "ItemsViewer"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = gui
 
--- Función para hacer frames dragables (PC y móvil)
+-- Función para hacer frames dragables
 local function makeDraggable(frame)
 	local dragging, dragInput, dragStart, startPos
 
@@ -59,18 +62,57 @@ mainFrame.Parent = screenGui
 Instance.new("UICorner", mainFrame)
 makeDraggable(mainFrame)
 
-
--- Título "Jmods 99"
+-- Título
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 25)
-titleLabel.Position = UDim2.new(0, 0, 0, -28) -- Aparece justo encima del mainFrame
+titleLabel.Position = UDim2.new(0, 0, 0, -28)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Jmods 99"
-titleLabel.TextColor3 = Color3.fromRGB(0, 0, 225) -- Letras negras
+titleLabel.TextColor3 = Color3.fromRGB(0, 0, 225)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextScaled = true
 titleLabel.Parent = mainFrame
 
+-- Tabs
+local currentTab = "Items"
+
+local tabFrame = Instance.new("Frame")
+tabFrame.Size = UDim2.new(1, 0, 0, 30)
+tabFrame.Position = UDim2.new(0, 0, 0, 0)
+tabFrame.BackgroundTransparency = 1
+tabFrame.Parent = mainFrame
+
+local itemsTab = Instance.new("TextButton")
+itemsTab.Size = UDim2.new(0.5, -2, 1, 0)
+itemsTab.Position = UDim2.new(0, 0, 0, 0)
+itemsTab.Text = "Items"
+itemsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+itemsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+itemsTab.Parent = tabFrame
+Instance.new("UICorner", itemsTab)
+
+local npcsTab = Instance.new("TextButton")
+npcsTab.Size = UDim2.new(0.5, -2, 1, 0)
+npcsTab.Position = UDim2.new(0.5, 2, 0, 0)
+npcsTab.Text = "NPCs"
+npcsTab.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+npcsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+npcsTab.Parent = tabFrame
+Instance.new("UICorner", npcsTab)
+
+itemsTab.MouseButton1Click:Connect(function()
+	currentTab = "Items"
+	itemsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	npcsTab.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	updateItems()
+end)
+
+npcsTab.MouseButton1Click:Connect(function()
+	currentTab = "NPCs"
+	npcsTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	itemsTab.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	updateItems()
+end)
 
 -- Minimizar botón
 local minimizeBtn = Instance.new("TextButton")
@@ -82,7 +124,7 @@ minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeBtn.Parent = mainFrame
 Instance.new("UICorner", minimizeBtn)
 
--- Botón flotante para restaurar
+-- Botón flotante
 local floatButton = Instance.new("TextButton")
 floatButton.Size = UDim2.new(0, 60, 0, 30)
 floatButton.Position = UDim2.new(0, 20, 0.5, -15)
@@ -95,23 +137,33 @@ Instance.new("UICorner", floatButton)
 makeDraggable(floatButton)
 
 -- Barra de búsqueda
-
 local searchBox = Instance.new("TextBox")
-searchBox.PlaceholderText = "Buscar..."  -- Muestra un texto guía, pero no texto escrito
-searchBox.Text = ""  -- <- Esto evita que se muestre "TextBox"
-searchBox.Size = UDim2.new(1, -40, 0, 30)
-searchBox.Position = UDim2.new(0, 5, 0, 5)
+searchBox.PlaceholderText = "Buscar..."
+searchBox.Text = ""
+searchBox.Size = UDim2.new(1, -100, 0, 30)
+searchBox.Position = UDim2.new(0, 5, 0, 35)
 searchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 searchBox.ClearTextOnFocus = false
 searchBox.Parent = mainFrame
 Instance.new("UICorner", searchBox)
 
+-- Botón "Traer Todos"
+local bringAllBtn = Instance.new("TextButton")
+bringAllBtn.Size = UDim2.new(0, 90, 0, 30)
+bringAllBtn.Position = UDim2.new(1, -95, 0, 35)
+bringAllBtn.Text = "Traer Todos"
+bringAllBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+bringAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+bringAllBtn.Parent = mainFrame
+Instance.new("UICorner", bringAllBtn)
+
+-- Continúa...
 
 -- ScrollFrame
 local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, -10, 1, -45)
-scrollFrame.Position = UDim2.new(0, 5, 0, 40)
+scrollFrame.Size = UDim2.new(1, -10, 1, -75)
+scrollFrame.Position = UDim2.new(0, 5, 0, 70)
 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollFrame.ScrollBarThickness = 6
 scrollFrame.BackgroundTransparency = 1
@@ -197,12 +249,13 @@ local function updateItems()
 		end
 	end
 
-	local itemsFolder = workspace:FindFirstChild("Items")
-	if not itemsFolder then return end
+	local folderName = currentTab == "NPCs" and "Characters" or "Items"
+	local container = workspace:FindFirstChild(folderName)
+	if not container then return end
 
 	local filter = string.lower(searchBox.Text)
 
-	for _, item in ipairs(itemsFolder:GetChildren()) do
+	for _, item in ipairs(container:GetChildren()) do
 		if string.find(string.lower(item.Name), filter) then
 			createItemButton(item)
 		end
@@ -234,7 +287,6 @@ bringBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Cerrar popup al hacer clic fuera
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then return end
 	if popupFrame.Visible and not popupFrame:IsDescendantOf(gui:GetGuiObjectsAtPosition(mouse.X, mouse.Y)[1]) then
@@ -242,21 +294,23 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 	end
 end)
 
--- Minimizar
+-- Corregir botón minimizar: ocultar solo el mainFrame
 minimizeBtn.MouseButton1Click:Connect(function()
 	mainFrame.Visible = false
+	popupFrame.Visible = false
+	bringAllPopup.Visible = false
 	floatButton.Visible = true
 end)
 
--- Restaurar
+
+-- Restaurar interfaz
 floatButton.MouseButton1Click:Connect(function()
 	mainFrame.Visible = true
 	floatButton.Visible = false
 end)
 
--- Auto-actualizar cada 2s
 task.spawn(function()
-	updateItems() -- 🔧 Esto actualiza los ítems justo al comenzar
+	updateItems()
 	while true do
 		task.wait(2)
 		updateItems()
@@ -265,4 +319,67 @@ end)
 
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 	updateItems()
+end)
+
+
+-- Botón "Traer Todos" se mostrará como popup adicional
+local bringAllPopup = Instance.new("TextButton")
+bringAllPopup.Size = UDim2.new(0, 100, 0, 25)
+bringAllPopup.Position = UDim2.new(0, 0, 1, 5)
+bringAllPopup.Text = "Traer Todos"
+bringAllPopup.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+bringAllPopup.TextColor3 = Color3.fromRGB(255, 255, 255)
+bringAllPopup.Visible = false
+bringAllPopup.ZIndex = 11
+bringAllPopup.Parent = popupFrame
+Instance.new("UICorner", bringAllPopup)
+
+-- Nuevo comportamiento para traer todos los objetos con ese nombre
+bringAllPopup.MouseButton1Click:Connect(function()
+	if not hoveredItem then return end
+	local targetName = hoveredItem.Name:lower()
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local folderName = currentTab == "NPCs" and "Characters" or "Items"
+	local container = workspace:FindFirstChild(folderName)
+	if not container then return end
+
+	for _, obj in ipairs(container:GetChildren()) do
+		if obj.Name:lower() == targetName then
+			local part = getItemPart(obj)
+			if part then
+				part.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+			end
+		end
+	end
+end)
+
+-- Mostrar popup completo con opción "Traer Todos"
+local function showPopup(itemButton, item)
+	hoveredItem = item
+	local absPos = itemButton.AbsolutePosition
+	popupFrame.Position = UDim2.new(0, absPos.X + itemButton.AbsoluteSize.X + 5, 0, absPos.Y)
+	popupFrame.Visible = true
+	bringAllPopup.Visible = true
+end
+
+local function hidePopup()
+	popupFrame.Visible = false
+	hoveredItem = nil
+	bringAllPopup.Visible = false
+end
+
+-- Minimizar solo el mainFrame y popup
+minimizeBtn.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	popupFrame.Visible = false
+	bringAllPopup.Visible = false
+	floatButton.Visible = true
+end)
+
+-- Restaurar desde botón flotante
+floatButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = true
+	floatButton.Visible = false
 end)

@@ -943,7 +943,7 @@ local function createHacksTab()
 local quitarCooldownBtn = Instance.new("TextButton")
 quitarCooldownBtn.Size = UDim2.new(0.98, 0, 0, 45)
 quitarCooldownBtn.Position = UDim2.new(0.01, 0, 0, 400) -- debajo del anterior
-quitarCooldownBtn.Text = "Quitar Cooldown E"
+quitarCooldownBtn.Text = "Abrir cofres rapido"
 quitarCooldownBtn.BackgroundColor3 = Color3.fromRGB(120, 60, 80)
 quitarCooldownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 quitarCooldownBtn.Font = Enum.Font.GothamBold

@@ -682,33 +682,7 @@ local function toggleFullbright()
 end
 
 -- FUNCIÓN AUTO-RESPAWN CORREGIDA
-local function toggleAutoRespawn()
-	autoRespawnEnabled = not autoRespawnEnabled
-	
-	if autoRespawnEnabled then
-		-- Limpiar conexión anterior
-		if connections.autoRespawn then
-			connections.autoRespawn:Disconnect()
-		end
-		
-		connections.autoRespawn = humanoid.Died:Connect(function()
-			if autoRespawnEnabled then
-				task.wait(2)
-				player:LoadCharacter()
-				createNotification("Auto-respawn ejecutado", 2, Color3.fromRGB(60, 120, 60))
-			end
-		end)
-		
-		createNotification("Auto-Respawn activado", 2, Color3.fromRGB(60, 120, 60))
-	else
-		if connections.autoRespawn then
-			connections.autoRespawn:Disconnect()
-			connections.autoRespawn = nil
-		end
-		
-		createNotification("Auto-Respawn desactivado", 2, Color3.fromRGB(200, 60, 60))
-	end
-end
+
 
 -- FUNCIÓN AUTO-CLICK CORREGIDA
 local function toggleAutoClick()
@@ -1054,7 +1028,7 @@ end)
 		{text = "Vuelo", var = "flyEnabled", func = toggleFly, enabledColor = Color3.fromRGB(60, 120, 60), disabledColor = Color3.fromRGB(80, 60, 60)},
 		{text = "Salto Infinito", var = "infiniteJumpEnabled", func = toggleInfiniteJump, enabledColor = Color3.fromRGB(60, 120, 60), disabledColor = Color3.fromRGB(80, 60, 60)},
 		{text = "Anti-AFK", var = "antiAFKEnabled", func = toggleAntiAFK, enabledColor = Color3.fromRGB(60, 120, 60), disabledColor = Color3.fromRGB(80, 60, 60)},
-		{text = "Auto-Respawn", var = "autoRespawnEnabled", func = toggleAutoRespawn, enabledColor = Color3.fromRGB(60, 120, 60), disabledColor = Color3.fromRGB(80, 60, 60)}
+		
 	}
 
 	-- Crear botones con estado correcto
@@ -1336,13 +1310,6 @@ local function createCombatTab()
 	
 	local combatButtons = {
 		{name = "Auto-Click", func = toggleAutoClick, var = "autoClickEnabled"},
-		{name = "Regeneración", func = function()
-			if humanoid then
-				humanoid.MaxHealth = humanoid.MaxHealth * 1.5
-				humanoid.Health = humanoid.MaxHealth
-				createNotification("Regeneración aplicada", 2, Color3.fromRGB(60, 120, 60))
-			end
-		end},
 		{name = "Invisibilidad", func = function()
 			if character then
 				for _, part in pairs(character:GetChildren()) do

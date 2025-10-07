@@ -392,13 +392,14 @@ showNotification("Suscríbete: joao_mods", "Apóyame y mira más scripts", "http
 
 -- Frame principal
 -- Frame principal OPTIMIZADO PARA MÓVIL
+-- Frame principal OPTIMIZADO PARA MÓVIL
 local mainFrame = Instance.new("Frame")
 if isMobile then
-    mainFrame.Size = UDim2.new(0, 300, 0, 400)
-    mainFrame.Position = UDim2.new(0, 15, 0.5, -200)
+	mainFrame.Size = UDim2.new(0, 240, 0, 300)
+	mainFrame.Position = UDim2.new(0, 10, 0.5, -150)
 else
-    mainFrame.Size = UDim2.new(0, 480, 0, 600)
-    mainFrame.Position = UDim2.new(0, 30, 0.5, -300)
+	mainFrame.Size = UDim2.new(0, 480, 0, 600)
+	mainFrame.Position = UDim2.new(0, 30, 0.5, -300)
 end
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 mainFrame.BorderSizePixel = 0
@@ -411,14 +412,15 @@ mainCorner.Parent = mainFrame
 makeDraggable(mainFrame)
 
 -- Título
+-- Título
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 35)
-titleLabel.Position = UDim2.new(0, 0, 0, -40)
+titleLabel.Size = UDim2.new(1, 0, 0, isMobile and 20 or 35)
+titleLabel.Position = UDim2.new(0, 0, 0, isMobile and -25 or -40)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Jmods 99"
-titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)--sexo
+titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
 titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = 18
+titleLabel.TextSize = isMobile and 12 or 18
 titleLabel.Parent = mainFrame
 
 
@@ -428,16 +430,21 @@ titleLabel.Parent = mainFrame
 -- Sistema de Tabs
 local currentTab = "Items"
 local tabFrame = Instance.new("Frame")
-tabFrame.Size = UDim2.new(1, 0, 0, 40)
+tabFrame.Size = UDim2.new(1, 0, 0, isMobile and 28 or 40)
 tabFrame.Position = UDim2.new(0, 0, 0, 0)
 tabFrame.BackgroundTransparency = 1
 tabFrame.Parent = mainFrame
 
+
+
 local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -10, 1, -55)
-contentFrame.Position = UDim2.new(0, 5, 0, 45)
+contentFrame.Size = UDim2.new(1, -6, 1, isMobile and -50 or -55)
+contentFrame.Position = UDim2.new(0, 3, 0, isMobile and 32 or 45)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
+
+
+
 
 -- Variables globales para tabs
 local searchBox, bringAllBtn, scrollFrame, layout
@@ -455,15 +462,16 @@ local tabs = {
 
 local tabButtons = {}
 for i, tab in ipairs(tabs) do
-	local tabBtn = Instance.new("TextButton")
-	tabBtn.Size = UDim2.new(1/#tabs, -2, 1, 0)
-	tabBtn.Position = UDim2.new((i-1)/#tabs, 1, 0, 0)
-	tabBtn.Text = tab.name
-	tabBtn.BackgroundColor3 = i == 1 and tab.color or Color3.fromRGB(40, 40, 45)
-	tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	tabBtn.Font = Enum.Font.Gotham
-	tabBtn.TextSize = 11
-	tabBtn.Parent = tabFrame
+local tabBtn = Instance.new("TextButton")
+tabBtn.Size = UDim2.new(1/#tabs, -1, 1, 0)
+tabBtn.Position = UDim2.new((i-1)/#tabs, 0, 0, 0)
+tabBtn.Text = isMobile and tab.name:sub(1, 1) or tab.name
+tabBtn.BackgroundColor3 = i == 1 and tab.color or Color3.fromRGB(40, 40, 45)
+tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tabBtn.Font = Enum.Font.Gotham
+tabBtn.TextSize = isMobile and 7 or 11
+tabBtn.Parent = tabFrame
+
 	Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 6)
 	
 	tabButtons[tab.name] = tabBtn
@@ -478,16 +486,17 @@ for i, tab in ipairs(tabs) do
 end
 
 -- Botón minimizar
+-- Botón minimizar
 local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, 35, 0, 35)
-minimizeBtn.Position = UDim2.new(1, -40, 0, 5)
-minimizeBtn.Text = "─"
+minimizeBtn.Size = UDim2.new(0, isMobile and 25 or 35, 0, isMobile and 25 or 35)
+minimizeBtn.Position = UDim2.new(1, isMobile and -30 or -40, 0, isMobile and 2 or 5)
+minimizeBtn.Text = "−"
 minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextSize = 16
+minimizeBtn.TextSize = 14
 minimizeBtn.Parent = mainFrame
-Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 6)
 
 -- Botón flotante
 local floatButton = Instance.new("TextButton")
@@ -509,8 +518,8 @@ makeDraggable(floatButton)
 local function createNotification(text, duration, color)
 	local notif = Instance.new("Frame")
 	if isMobile then
-		notif.Size = UDim2.new(0, 220, 0, 45)
-		notif.Position = UDim2.new(1, -230, 0, 10)
+		notif.Size = UDim2.new(0, 160, 0, 38)
+		notif.Position = UDim2.new(1, -170, 0, 8)
 	else
 		notif.Size = UDim2.new(0, 350, 0, 60)
 		notif.Position = UDim2.new(1, -370, 0, 20)
@@ -520,18 +529,18 @@ local function createNotification(text, duration, color)
 	Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 8)
 
 	local notifText = Instance.new("TextLabel")
-	notifText.Size = UDim2.new(1, -10, 1, -10)
-	notifText.Position = UDim2.new(0, 5, 0, 5)
+	notifText.Size = UDim2.new(1, -8, 1, -8)
+	notifText.Position = UDim2.new(0, 4, 0, 4)
 	notifText.Text = text
 	notifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 	notifText.BackgroundTransparency = 1
 	notifText.Font = Enum.Font.Gotham
-	notifText.TextSize = isMobile and 10 or 14
+	notifText.TextSize = isMobile and 8 or 14
 	notifText.TextScaled = true
 	notifText.TextWrapped = true
 	notifText.Parent = notif
 
-	notif:TweenPosition(UDim2.new(1, isMobile and -230 or -370, 0, 20), "Out", "Quad", 0.3, true)
+	notif:TweenPosition(UDim2.new(1, isMobile and -170 or -370, 0, 20), "Out", "Quad", 0.3, true)
 	
 	task.spawn(function()
 		task.wait(duration or 3)
@@ -540,7 +549,6 @@ local function createNotification(text, duration, color)
 		notif:Destroy()
 	end)
 end
-
 -- FUNCIÓN DE VUELO CORREGIDA
 local function toggleFly()
 	flyEnabled = not flyEnabled

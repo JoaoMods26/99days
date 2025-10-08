@@ -4,7 +4,7 @@
 -- ╚══════════════════════════════════════════════════════╝
 
 -- ⚡ Cargar JmodsLib
-local JmodsLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/pruebasjoao/test/refs/heads/main/JmodsLibV1.0'))()
+local JmodsLib = loadstring(game:HttpGet('https://pastebin.com/raw/qXkXc9S8'))()
 
 -- 🎮 Servicios de Roblox
 local Players = game:GetService("Players")
@@ -44,11 +44,11 @@ local Window = JmodsLib:CreateWindow({
     Icon = 128308831323216,
     LoadingTitle = "Cargando Jmods 99",
     LoadingSubtitle = "Preparando funciones...",
-    Theme = "dark_neon",
+    Theme = "oscuro neon",
     Intro = true,   
     IntroIcon = 128308831323216,
     AnimationIntro = 0,
-    DragImage = 127271155083726,
+    DragImage = 127271155083726
 })
 
 -- ═══════════════════════════════════════════════════════
@@ -489,7 +489,7 @@ MainTab:CreateSection("📋 Información del Hub")
 
 MainTab:CreateParagraph({
     Title = "Hub de 99 Noches en el Bosque",
-    Content = "Creado por joao_mods con JmodsLib."
+    Content = "Creado por joao_mods con JmodsLib.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 })
 
 MainTab:CreateButton({
@@ -586,14 +586,14 @@ MainTab:CreateToggle({
                 local root = character:WaitForChild("HumanoidRootPart")
                 local angle = 0
                 local radius = 150
-                local height = 70
-                local angularSpeed = 0.10     -- 🔹 Giro más controlado
+                local height = 200
+                local angularSpeed = 0.9     -- 🔹 Giro más controlado
                 local radiusGrowth = 0.9      -- 🔹 Expansión más suave
 
                 local startTime = tick()
                 while unlockingMap and root do
                     -- Si pasaron 30 segundos → se detiene solo
-                    if tick() - startTime >= 70 then
+                    if tick() - startTime >= 55 then
                         unlockingMap = false
                         break
                     end
@@ -720,7 +720,7 @@ ItemsTab:CreateSection("🔍 Gestión de Items")
 
 ItemsTab:CreateParagraph({
     Title = "ℹ️ Instrucciones",
-    Content = "Selecciona un item del menú desplegable: Tp o Ir"
+    Content = "Selecciona un item del menú desplegable para teletransportarte o traerlo. Los menús se actualizan automáticamente."
 })
 
 -- Variables para dropdowns
@@ -733,8 +733,6 @@ local npcDropdownOptions = {"Cargando NPCs..."}
 -- Función para obtener listas de items y cofres (únicos)
 -- Función para obtener listas de items y cofres (permitir repetidos)
 -- Función para obtener listas de items (únicos) y cofres (permitir repetidos)
--- Función para obtener listas de items y cofres (solo cofres válidos con ProximityPrompt en Main)
--- Función para obtener listas de items y cofres (solo cofres válidos con ProximityPrompt en Main)
 local function getItemLists()
     local itemsFolder = workspace:FindFirstChild("Items")
     if not itemsFolder then
@@ -747,14 +745,11 @@ local function getItemLists()
 
     for _, item in ipairs(itemsFolder:GetChildren()) do
         local nameLower = item.Name:lower()
+        -- 🔹 Cofres → se agregan todos, incluso repetidos
         if nameLower:find("chest") or nameLower:find("cofre") then
-            -- ✅ Solo agregar cofres que tengan Main con ProximityPrompt
-            local mainPart = item:FindFirstChild("Main")
-            if mainPart and mainPart:FindFirstChildWhichIsA("ProximityPrompt") then
-                table.insert(chestNames, item.Name)
-            end
+            table.insert(chestNames, item.Name)
         else
-            -- ✅ Items normales (únicos)
+            -- 🔹 Items → solo únicos
             if not uniqueItems[item.Name] then
                 uniqueItems[item.Name] = true
                 table.insert(itemNames, item.Name)
@@ -771,10 +766,7 @@ end
 
 
 
-
-
 -- Función para obtener lista de NPCs
--- Función para obtener lista de NPCs (excluyendo Lost Childs)
 local function getNPCList()
     local npcsFolder = workspace:FindFirstChild("Characters")
     if not npcsFolder then return {"No hay NPCs"} end
@@ -783,20 +775,15 @@ local function getNPCList()
     local uniqueNPCs = {}
     
     for _, npc in ipairs(npcsFolder:GetChildren()) do
-        local nameLower = npc.Name:lower()
-        -- 🚫 excluir lost/child
-        if not (nameLower:find("lost") or nameLower:find("child")) then
-            if not uniqueNPCs[npc.Name] then
-                uniqueNPCs[npc.Name] = true
-                table.insert(npcNames, npc.Name)
-            end
+        if not uniqueNPCs[npc.Name] then
+            uniqueNPCs[npc.Name] = true
+            table.insert(npcNames, npc.Name)
         end
     end
     
     table.sort(npcNames)
     return #npcNames > 0 and npcNames or {"No hay NPCs"}
 end
-
 
 -- Actualizar listas iniciales
 -- Actualizar listas iniciales
@@ -806,6 +793,7 @@ npcDropdownOptions = getNPCList()
 
 -- Dropdown de Items
 -- Dropdowns guardados
+-- Dropdown de Items
 local ItemsDropdown = ItemsTab:CreateDropdown({
     Name = "📦 Seleccionar Item",
     Options = itemDropdownOptions,
@@ -1237,72 +1225,35 @@ ItemsTab:CreateButton({
 -- ═════════════════════════════════════════════════════════════
 
 -- ═════════════════════════════════════════════════════════════
--- 🔄 SISTEMA DE ACTUALIZACIÓN DE DROPDOWNS (DEBOUNCE + RESELECCIÓN)
+-- 🔄 SISTEMA DE ACTUALIZACIÓN CON UpdateOnClose (SIN LAG)
 -- ═════════════════════════════════════════════════════════════
 
--- ═════════════════════════════════════════════════════════════
--- 🔄 SISTEMA DE ACTUALIZACIÓN DE DROPDOWNS (DELAY DINÁMICO)
--- ═════════════════════════════════════════════════════════════
-
--- ═════════════════════════════════════════════════════════════
--- 🔄 SISTEMA DE ACTUALIZACIÓN DE DROPDOWNS (DELAY DINÁMICO)
--- ═════════════════════════════════════════════════════════════
-
-local function safeUpdateDropdown(dropdown, newOptions)
-    if dropdown and typeof(dropdown.UpdateOptions) == "function" then
-        dropdown:UpdateOptions(newOptions)
+local function safeUpdateDropdownOnClose(dropdown, newOptions)
+    if dropdown and typeof(dropdown.UpdateOnClose) == "function" then
+        dropdown:UpdateOnClose(newOptions)
     end
 end
 
+-- Función que prepara actualizaciones (solo se aplican al cerrar los dropdowns)
 local function refreshAllDropdowns()
-    -- Guardar selección previa
-    local prevItem = currentSelectedItem
-    local prevChest = currentSelectedChest
-    local prevNPC = currentSelectedNPC
-    local prevLost = currentSelectedLostChild
-
-    -- Refrescar listas
     local newItemList, newChestList = getItemLists()
-    local newNPCList = getNPCList()
-    local newLostList = getLostChildList()
-
-    safeUpdateDropdown(ItemsDropdown, newItemList)
-    safeUpdateDropdown(ChestDropdown, newChestList)
-    safeUpdateDropdown(NPCDropdown, newNPCList)
-    safeUpdateDropdown(LostChildDropdown, newLostList)
-
-    -- Restaurar selección si existe
-    if prevItem and table.find(newItemList, prevItem) then
-        currentSelectedItem = prevItem
-    end
-    if prevChest and table.find(newChestList, prevChest) then
-        currentSelectedChest = prevChest
-    end
-    if prevNPC and table.find(newNPCList, prevNPC) then
-        currentSelectedNPC = prevNPC
-    end
-    if prevLost and table.find(newLostList, prevLost) then
-        currentSelectedLostChild = prevLost
-    end
+    safeUpdateDropdownOnClose(ItemsDropdown, newItemList)
+    safeUpdateDropdownOnClose(ChestDropdown, newChestList)
+    safeUpdateDropdownOnClose(NPCDropdown, getNPCList())
+    safeUpdateDropdownOnClose(LostChildDropdown, getLostChildList())
 end
 
--- 🔥 Delay dinámico
-local startTime = tick()
-local baseDelay = 270 -- 4.5 min
-local longDelay = 600 -- 10 min
-
-task.spawn(function()
-    while true do
-        local elapsed = tick() - startTime
-        if elapsed >= (30 * 60) then
-            task.wait(longDelay) -- después de 30 min → delay de 10 min
-        else
-            task.wait(baseDelay) -- antes de 30 min → delay de 270s
-        end
-        refreshAllDropdowns()
+-- 🔥 Debounce: evita actualizaciones excesivas
+local pendingUpdate = false
+local function scheduleUpdate()
+    if not pendingUpdate then
+        pendingUpdate = true
+        task.delay(1.5, function() -- Actualiza cada 1.5s (más rápido que antes)
+            refreshAllDropdowns()
+            pendingUpdate = false
+        end)
     end
-end)
-
+end
 
 -- 📦 Items y Cofres
 local itemsFolder = workspace:FindFirstChild("Items")
@@ -1318,7 +1269,10 @@ if charactersFolder then
     charactersFolder.ChildRemoved:Connect(scheduleUpdate)
 end
 
-
+-- 🔄 Actualización inicial al abrir la interfaz
+task.delay(1, function()
+    refreshAllDropdowns()
+end)
 
 
 
@@ -1404,56 +1358,6 @@ ESPTab:CreateToggle({
 
 ESPTab:CreateSection("🧹 Gestión de ESP")
 
--- 🌈 Configuración de color ESP
-local espColor = Color3.fromRGB(255, 255, 0)
-local rainbowESPEnabled = false
-
-ESPTab:CreateColorPicker({
-    Name = "🎨 Color del ESP",
-    Color = espColor,
-    Callback = function(color)
-        espColor = color
-        -- Actualizar ESP existente
-        for obj, esp in pairs(espObjects) do
-            if esp and esp:FindFirstChildOfClass("Frame") then
-                esp.Frame.BackgroundColor3 = espColor
-            end
-        end
-        notify("🎨 Color ESP", "Color actualizado", 2)
-    end
-})
-
-ESPTab:CreateToggle({
-    Name = "🌈 Modo Rainbow ESP",
-    CurrentValue = false,
-    Callback = function(state)
-        rainbowESPEnabled = state
-
-        if rainbowESPEnabled then
-            task.spawn(function()
-                while rainbowESPEnabled do
-                    local t = tick() * 2
-                    local rainbow = Color3.fromHSV((t % 1), 1, 1)
-                    for obj, esp in pairs(espObjects) do
-                        if esp and esp:FindFirstChildOfClass("Frame") then
-                            esp.Frame.BackgroundColor3 = rainbow
-                        end
-                    end
-                    task.wait(0.1)
-                end
-            end)
-            notify("🌈 Rainbow ESP", "Activado", 2)
-        else
-            for obj, esp in pairs(espObjects) do
-                if esp and esp:FindFirstChildOfClass("Frame") then
-                    esp.Frame.BackgroundColor3 = espColor
-                end
-            end
-            notify("🌈 Rainbow ESP", "Desactivado", 2)
-        end
-    end
-})
-
 ESPTab:CreateButton({
     Name = "🗑️ Limpiar Todo ESP",
     Callback = function()
@@ -1518,32 +1422,6 @@ VisualTab:CreateColorPicker({
         notify("✅ Color Aplicado", "Ambiente cambiado", 2)
     end
 })
-
--- 🌈 Modo Rainbow para el color ambiente
-local rainbowAmbientEnabled = false
-
-VisualTab:CreateToggle({
-    Name = "🌈 Modo Rainbow Ambiente",
-    CurrentValue = false,
-    Callback = function(state)
-        rainbowAmbientEnabled = state
-
-        if rainbowAmbientEnabled then
-            task.spawn(function()
-                while rainbowAmbientEnabled do
-                    local hue = (tick() % 5) / 5
-                    Lighting.Ambient = Color3.fromHSV(hue, 1, 1)
-                    task.wait(0.1)
-                end
-            end)
-            notify("🌈 Ambiente", "Modo rainbow activado", 2)
-        else
-            Lighting.Ambient = espColor
-            notify("🌈 Ambiente", "Modo rainbow desactivado", 2)
-        end
-    end
-})
-
 
 VisualTab:CreateButton({
     Name = "🌅 Cambiar Hora del Día",
@@ -1877,8 +1755,6 @@ _G.JmodsHub = {
 }
 
 print("═══════════════════════════════════════════════════════")
-print("👤Gay quien lea esto👤")
-print("═══════════════════════════════════════════════════════")
 print("✅ JMODS HUB - 99 NOCHES EN EL BOSQUE v2.0")
 print("═══════════════════════════════════════════════════════")
 print("🎨 Interfaz: JmodsLib")
@@ -1895,7 +1771,9 @@ print("  ✓ Modificadores de velocidad y salto con sliders")
 print("  ✓ Sistema de teletransporte completo")
 print("  ✓ Herramientas de combate (Auto-Click, Invisibilidad)")
 print("  ✓ Efectos visuales (Fullbright, Wallhack)")
+print("  ✓ Anti-AFK automático")
 print("  ✓ Control de hora del día y niebla")
+print("  ✓ 24 temas personalizables con auto-guardado")
 print("  ✓ Abrir cofres instantáneamente")
 print("═══════════════════════════════════════════════════════")
 print("⌨️ KEYBINDS GLOBALES:")
@@ -1907,4 +1785,18 @@ print("  F6 → Toggle Fullbright")
 print("  F7 → Toggle Auto-Farm")
 print("  F8 → Toggle Anti-AFK")
 print("  INSERT → Minimizar/Restaurar GUI")
+print("═══════════════════════════════════════════════════════")
+print("📑 TABS DISPONIBLES:")
+print("  🏠 Principal - Información y acciones rápidas")
+print("  🎮 Jugador - Modificadores y habilidades")
+print("  📦 Items - Gestión de items y auto-farm")
+print("  ⚔️ Combate - Herramientas de combate")
+print("  👁️ ESP - Sistema de visión mejorada")
+print("  🎨 Visual - Efectos visuales y personalización")
+print("  🌐 Teleport - Sistema de teletransporte")
+print("  ⚙️ Config - Configuración y créditos")
+print("═══════════════════════════════════════════════════════")
+print("✅ Script cargado correctamente - Sin errores")
+print("🎮 ¡Disfruta del hub y suscríbete a joao_mods!")
+print("💡 Usa _G.JmodsHub para acceder a funciones avanzadas")
 print("═══════════════════════════════════════════════════════")

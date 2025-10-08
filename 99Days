@@ -934,13 +934,13 @@ local function createHacksTab()
 	
 
 local quitarCooldownBtn = Instance.new("TextButton")
-quitarCooldownBtn.Size = UDim2.new(0.98, 0, 0, 45)
-quitarCooldownBtn.Position = UDim2.new(0.01, 0, 0, 400) -- debajo del anterior
+quitarCooldownBtn.Size = UDim2.new(0.98, 0, 0, isMobile and 35 or 45)
+quitarCooldownBtn.Position = UDim2.new(0.01, 0, 0, isMobile and 260 or 400) -- debajo del anterior
 quitarCooldownBtn.Text = "Abrir cofres rapido"
 quitarCooldownBtn.BackgroundColor3 = Color3.fromRGB(120, 60, 80)
 quitarCooldownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 quitarCooldownBtn.Font = Enum.Font.GothamBold
-quitarCooldownBtn.TextSize = 14
+quitarCooldownBtn.TextSize = isMobile and 10 or 14
 quitarCooldownBtn.Parent = contentFrame
 Instance.new("UICorner", quitarCooldownBtn).CornerRadius = UDim.new(0, 8)
 
@@ -1056,13 +1056,13 @@ end)
 		local btn = Instance.new("TextButton")
 		local row = math.floor((i-1) / 2)
 		local col = (i-1) % 2
-		btn.Size = UDim2.new(0.48, 0, 0, 45)
-		btn.Position = UDim2.new(col * 0.51 + 0.01, 0, 0, 185 + row * 55)
+		btn.Size = UDim2.new(0.48, 0, 0, isMobile and 35 or 45)
+		btn.Position = UDim2.new(col * 0.51 + 0.01, 0, 0, isMobile and 135 + row * 42 or 185 + row * 55)
 		btn.Text = buttonData.text .. ": OFF"
 		btn.BackgroundColor3 = buttonData.disabledColor
 		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 12
+btn.TextSize = isMobile and 9 or 12
 		btn.Parent = contentFrame
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
@@ -1085,13 +1085,13 @@ end)
 	end
 
 	local autoCollectBtn = Instance.new("TextButton")
-	autoCollectBtn.Size = UDim2.new(0.98, 0, 0, 45)
-	autoCollectBtn.Position = UDim2.new(0.01, 0, 0, 350)
+autoCollectBtn.Size = UDim2.new(0.98, 0, 0, isMobile and 35 or 45)
+	autoCollectBtn.Position = UDim2.new(0.01, 0, 0, isMobile and 220 or 350)
 	autoCollectBtn.Text = "Auto-Collect Items (una vez)"
 	autoCollectBtn.BackgroundColor3 = Color3.fromRGB(60, 80, 120)
 	autoCollectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	autoCollectBtn.Font = Enum.Font.GothamBold
-	autoCollectBtn.TextSize = 14
+	autoCollectBtn.TextSize = isMobile and 10 or 14
 	autoCollectBtn.Parent = contentFrame
 	Instance.new("UICorner", autoCollectBtn).CornerRadius = UDim.new(0, 8)
 
@@ -1138,18 +1138,18 @@ local function createESPTab()
 	
 	for i, espType in ipairs(espTypes) do
 		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0.98, 0, 0, 60)
+btn.Size = UDim2.new(0.98, 0, 0, isMobile and 40 or 60)
 		btn.Position = UDim2.new(0.01, 0, 0, yPos)
 		btn.Text = espType.name .. ": OFF"
 		btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
 		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 16
+btn.TextSize = isMobile and 11 or 16
 		btn.Parent = contentFrame
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
 		espButtons[i] = btn
-		yPos = yPos + 70
+yPos = yPos + (isMobile and 45 or 70)
 
 		btn.MouseButton1Click:Connect(function()
 			espType.enabled = not espType.enabled
@@ -1202,13 +1202,13 @@ local function createESPTab()
 
 	-- Clear All ESP button
 	local clearAllBtn = Instance.new("TextButton")
-	clearAllBtn.Size = UDim2.new(0.98, 0, 0, 60)
+clearAllBtn.Size = UDim2.new(0.98, 0, 0, isMobile and 40 or 60)
 	clearAllBtn.Position = UDim2.new(0.01, 0, 0, yPos)
 	clearAllBtn.Text = "Limpiar Todo ESP"
 	clearAllBtn.BackgroundColor3 = Color3.fromRGB(120, 80, 80)
 	clearAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	clearAllBtn.Font = Enum.Font.GothamBold
-	clearAllBtn.TextSize = 16
+	clearAllBtn.TextSize = isMobile and 11 or 16
 	clearAllBtn.Parent = contentFrame
 	Instance.new("UICorner", clearAllBtn).CornerRadius = UDim.new(0, 8)
 
@@ -1253,13 +1253,13 @@ local function createVisualTab()
 	
 	for i, button in ipairs(visualButtons) do
 		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0.48, 0, 0, 60)
-		btn.Position = UDim2.new(((i-1) % 2) * 0.51 + 0.01, 0, 0, 5 + math.floor((i-1) / 2) * 70)
+btn.Size = UDim2.new(0.48, 0, 0, isMobile and 40 or 60)
+		btn.Position = UDim2.new(((i-1) % 2) * 0.51 + 0.01, 0, 0, 5 + math.floor((i-1) / 2) * (isMobile and 45 or 70))
 		btn.Text = button.name .. (button.var and ": OFF" or "")
 		btn.BackgroundColor3 = Color3.fromRGB(80, 60, 80)
 		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 14
+		btn.TextSize = isMobile and 9 or 14
 		btn.Parent = contentFrame
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 		
@@ -1278,42 +1278,42 @@ local function createVisualTab()
 	
 	-- Control de velocidad de vuelo
 	local flySpeedFrame = Instance.new("Frame")
-	flySpeedFrame.Size = UDim2.new(1, -10, 0, 80)
-	flySpeedFrame.Position = UDim2.new(0, 5, 0, 150)
+flySpeedFrame.Size = UDim2.new(1, -10, 0, isMobile and 60 or 80)
+	flySpeedFrame.Position = UDim2.new(0, 5, 0, isMobile and 100 or 150)
 	flySpeedFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 	flySpeedFrame.Parent = contentFrame
 	Instance.new("UICorner", flySpeedFrame).CornerRadius = UDim.new(0, 8)
 
 	local flySpeedLabel = Instance.new("TextLabel")
-	flySpeedLabel.Size = UDim2.new(1, -10, 0, 25)
+	flySpeedLabel.Size = UDim2.new(1, -10, 0, isMobile and 18 or 25)
 	flySpeedLabel.Position = UDim2.new(0, 5, 0, 5)
 	flySpeedLabel.Text = "Velocidad de Vuelo:"
 	flySpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	flySpeedLabel.BackgroundTransparency = 1
 	flySpeedLabel.Font = Enum.Font.GothamBold
-	flySpeedLabel.TextSize = 14
+	flySpeedLabel.TextSize = isMobile and 10 or 14
 	flySpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
 	flySpeedLabel.Parent = flySpeedFrame
 
 	local flySpeedSlider = Instance.new("TextBox")
-	flySpeedSlider.Size = UDim2.new(0, 100, 0, 30)
-	flySpeedSlider.Position = UDim2.new(0, 5, 0, 35)
+flySpeedSlider.Size = UDim2.new(0, isMobile and 60 or 100, 0, isMobile and 25 or 30)
+	flySpeedSlider.Position = UDim2.new(0, 5, 0, isMobile and 20 or 35)
 	flySpeedSlider.Text = tostring(flySpeed)
 	flySpeedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 	flySpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
 	flySpeedSlider.Font = Enum.Font.Gotham
-	flySpeedSlider.TextSize = 14
+flySpeedSlider.TextSize = isMobile and 10 or 14
 	flySpeedSlider.Parent = flySpeedFrame
 	Instance.new("UICorner", flySpeedSlider).CornerRadius = UDim.new(0, 4)
 
 	local flySpeedBtn = Instance.new("TextButton")
-	flySpeedBtn.Size = UDim2.new(0, 120, 0, 30)
-	flySpeedBtn.Position = UDim2.new(0, 110, 0, 35)
+flySpeedBtn.Size = UDim2.new(0, isMobile and 70 or 120, 0, isMobile and 25 or 30)
+	flySpeedBtn.Position = UDim2.new(0, isMobile and 68 or 110, 0, isMobile and 20 or 35)
 	flySpeedBtn.Text = "Aplicar Velocidad"
 	flySpeedBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 80)
 	flySpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	flySpeedBtn.Font = Enum.Font.Gotham
-	flySpeedBtn.TextSize = 12
+	flySpeedBtn.TextSize = isMobile and 8 or 12
 	flySpeedBtn.Parent = flySpeedFrame
 	Instance.new("UICorner", flySpeedBtn).CornerRadius = UDim.new(0, 4)
 
@@ -1351,13 +1351,13 @@ local function createCombatTab()
 	
 	for i, button in ipairs(combatButtons) do
 		local btn = Instance.new("TextButton")
-		btn.Size = UDim2.new(0.48, 0, 0, 60)
-		btn.Position = UDim2.new(((i-1) % 2) * 0.51 + 0.01, 0, 0, 5 + math.floor((i-1) / 2) * 70)
+btn.Size = UDim2.new(0.48, 0, 0, isMobile and 40 or 60)
+		btn.Position = UDim2.new(((i-1) % 2) * 0.51 + 0.01, 0, 0, 5 + math.floor((i-1) / 2) * (isMobile and 45 or 70))
 		btn.Text = button.name .. (button.var and ": OFF" or "")
 		btn.BackgroundColor3 = Color3.fromRGB(100, 60, 60)
 		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 14
+btn.TextSize = isMobile and 9 or 14
 		btn.Parent = contentFrame
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 		
@@ -1374,8 +1374,8 @@ local function createCombatTab()
 	
 	-- Información de combate
 	local infoFrame = Instance.new("Frame")
-	infoFrame.Size = UDim2.new(1, -10, 0, 100)
-	infoFrame.Position = UDim2.new(0, 5, 0, 150)
+infoFrame.Size = UDim2.new(1, -10, 0, isMobile and 70 or 100)
+	infoFrame.Position = UDim2.new(0, 5, 0, isMobile and 95 or 150)
 	infoFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 	infoFrame.Parent = contentFrame
 	Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
@@ -1387,7 +1387,7 @@ local function createCombatTab()
 	infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 	infoLabel.BackgroundTransparency = 1
 	infoLabel.Font = Enum.Font.Gotham
-	infoLabel.TextSize = 12
+infoLabel.TextSize = isMobile and 8 or 12
 	infoLabel.TextXAlignment = Enum.TextXAlignment.Left
 	infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 	infoLabel.Parent = infoFrame
@@ -1890,6 +1890,7 @@ print("• Mejor manejo de errores y notificaciones")
 print("• Sistema de limpieza mejorado")
 print("• Funciones responden correctamente")
 print("===============================================")
+print("aaaaaaaaa")
 print("🎮 NUEVOS KEYBINDS:")
 print("F1: Mostrar/Ocultar GUI")
 print("F2: Auto-Collect (una vez)")

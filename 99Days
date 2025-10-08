@@ -48,7 +48,8 @@ local Window = JmodsLib:CreateWindow({
     Intro = true,   
     IntroIcon = 128308831323216,
     AnimationIntro = 0,
-    DragImage = 127271155083726
+    DragImage = 127271155083726,
+    OpenButtom = "Izquierda",
 })
 
 -- ═══════════════════════════════════════════════════════

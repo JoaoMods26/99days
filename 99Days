@@ -4,7 +4,7 @@
 -- ╚══════════════════════════════════════════════════════╝
 
 -- ⚡ Cargar JmodsLib
-local JmodsLib = loadstring(game:HttpGet('https://pastebin.com/raw/qXkXc9S8'))()
+local JmodsLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/prauebasjoao/test/refs/heads/main/JmodsLibV1.0'))()
 
 -- 🎮 Servicios de Roblox
 local Players = game:GetService("Players")

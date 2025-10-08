@@ -1,6 +1,8 @@
 
-local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local isMobile = UserInputService.TouchEnabled  -- ⭐ VARIABLE GLOBAL ÚNICA
+
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
@@ -392,11 +394,10 @@ showNotification("Suscríbete: joao_mods", "Apóyame y mira más scripts", "http
 
 -- Frame principal
 -- Frame principal OPTIMIZADO PARA MÓVIL
--- Frame principal OPTIMIZADO PARA MÓVIL
 local mainFrame = Instance.new("Frame")
 if isMobile then
-	mainFrame.Size = UDim2.new(0, 240, 0, 300)
-	mainFrame.Position = UDim2.new(0, 10, 0.5, -150)
+	mainFrame.Size = UDim2.new(0, 220, 0, 280)  -- MÁS PEQUEÑO
+	mainFrame.Position = UDim2.new(0, 5, 0.5, -140)
 else
 	mainFrame.Size = UDim2.new(0, 480, 0, 600)
 	mainFrame.Position = UDim2.new(0, 30, 0.5, -300)
@@ -411,16 +412,15 @@ mainCorner.CornerRadius = UDim.new(0, 10)
 mainCorner.Parent = mainFrame
 makeDraggable(mainFrame)
 
--- Título
--- Título
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, isMobile and 20 or 35)
-titleLabel.Position = UDim2.new(0, 0, 0, isMobile and -25 or -40)
+titleLabel.Size = UDim2.new(1, 0, 0, isMobile and 18 or 35)
+titleLabel.Position = UDim2.new(0, 0, 0, isMobile and -20 or -40)
+
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Jmods 99"
-titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)--sexo
 titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = isMobile and 12 or 18
+titleLabel.TextSize = 18
 titleLabel.Parent = mainFrame
 
 
@@ -430,21 +430,16 @@ titleLabel.Parent = mainFrame
 -- Sistema de Tabs
 local currentTab = "Items"
 local tabFrame = Instance.new("Frame")
-tabFrame.Size = UDim2.new(1, 0, 0, isMobile and 28 or 40)
+tabFrame.Size = UDim2.new(1, 0, 0, isMobile and 23 or 40)
 tabFrame.Position = UDim2.new(0, 0, 0, 0)
 tabFrame.BackgroundTransparency = 1
 tabFrame.Parent = mainFrame
 
-
-
 local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -6, 1, isMobile and -50 or -55)
-contentFrame.Position = UDim2.new(0, 3, 0, isMobile and 32 or 45)
+contentFrame.Size = UDim2.new(1, -6, 1, isMobile and -48 or -55)
+contentFrame.Position = UDim2.new(0, 3, 0, isMobile and 25 or 45)
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
-
-
-
 
 -- Variables globales para tabs
 local searchBox, bringAllBtn, scrollFrame, layout
@@ -469,9 +464,8 @@ tabBtn.Text = isMobile and tab.name:sub(1, 1) or tab.name
 tabBtn.BackgroundColor3 = i == 1 and tab.color or Color3.fromRGB(40, 40, 45)
 tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 tabBtn.Font = Enum.Font.Gotham
-tabBtn.TextSize = isMobile and 7 or 11
-tabBtn.Parent = tabFrame
-
+tabBtn.TextSize = isMobile and 8 or 11
+	tabBtn.Parent = tabFrame
 	Instance.new("UICorner", tabBtn).CornerRadius = UDim.new(0, 6)
 	
 	tabButtons[tab.name] = tabBtn
@@ -486,17 +480,16 @@ tabBtn.Parent = tabFrame
 end
 
 -- Botón minimizar
--- Botón minimizar
 local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, isMobile and 25 or 35, 0, isMobile and 25 or 35)
-minimizeBtn.Position = UDim2.new(1, isMobile and -30 or -40, 0, isMobile and 2 or 5)
-minimizeBtn.Text = "−"
+minimizeBtn.Size = UDim2.new(0, isMobile and 23 or 35, 0, isMobile and 23 or 35)
+minimizeBtn.Position = UDim2.new(1, isMobile and -28 or -40, 0, isMobile and 1 or 5)
+minimizeBtn.Text = "─"
 minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextSize = 14
+minimizeBtn.TextSize = 16
 minimizeBtn.Parent = mainFrame
-Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 8)
 
 -- Botón flotante
 local floatButton = Instance.new("TextButton")
@@ -517,9 +510,9 @@ makeDraggable(floatButton)
 -- Sistema de notificaciones
 local function createNotification(text, duration, color)
 	local notif = Instance.new("Frame")
-	if isMobile then
-		notif.Size = UDim2.new(0, 160, 0, 38)
-		notif.Position = UDim2.new(1, -170, 0, 8)
+if isMobile then
+		notif.Size = UDim2.new(0, 150, 0, 32)
+		notif.Position = UDim2.new(1, -160, 0, 5)
 	else
 		notif.Size = UDim2.new(0, 350, 0, 60)
 		notif.Position = UDim2.new(1, -370, 0, 20)
@@ -529,18 +522,18 @@ local function createNotification(text, duration, color)
 	Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 8)
 
 	local notifText = Instance.new("TextLabel")
-	notifText.Size = UDim2.new(1, -8, 1, -8)
-	notifText.Position = UDim2.new(0, 4, 0, 4)
+	notifText.Size = UDim2.new(1, -10, 1, -10)
+	notifText.Position = UDim2.new(0, 5, 0, 5)
 	notifText.Text = text
 	notifText.TextColor3 = Color3.fromRGB(255, 255, 255)
 	notifText.BackgroundTransparency = 1
 	notifText.Font = Enum.Font.Gotham
-	notifText.TextSize = isMobile and 8 or 14
+notifText.TextSize = isMobile and 7 or 14
 	notifText.TextScaled = true
 	notifText.TextWrapped = true
 	notifText.Parent = notif
 
-	notif:TweenPosition(UDim2.new(1, isMobile and -170 or -370, 0, 20), "Out", "Quad", 0.3, true)
+	notif:TweenPosition(UDim2.new(1, isMobile and -230 or -370, 0, 20), "Out", "Quad", 0.3, true)
 	
 	task.spawn(function()
 		task.wait(duration or 3)
@@ -549,6 +542,7 @@ local function createNotification(text, duration, color)
 		notif:Destroy()
 	end)
 end
+
 -- FUNCIÓN DE VUELO CORREGIDA
 local function toggleFly()
 	flyEnabled = not flyEnabled

@@ -1,6 +1,6 @@
 -- ╔═══════════════════════════════════════════════════════╗
 -- ║  🌙 J99 - HUB COMPLETO 99 NOCHES EN EL BOSQUE V3.0   ║
--- ║  Fusión de joao_mods
+-- ║  de joao_mods
 -- ╚═══════════════════════════════════════════════════════╝
 
 -- ⚡ Cargar JmodsLib
@@ -2214,6 +2214,7 @@ PlayersTab:CreateSection("🎯 Gestión de Jugadores")
 -- Variables para el sistema de jugadores
 local selectedTargetPlayer = nil
 local selectedItemForPlayer = nil
+local selectedNPCBody = nil
 local spectatingPlayer = nil
 local spectateConnection = nil
 local originalCamera = nil
@@ -2257,6 +2258,32 @@ local function getItemListNoChests()
     return #itemNames > 0 and itemNames or {"No hay items"}
 end
 
+-- 🆕 Función para obtener lista de NPCs con "Body" en el nombre
+local function getNPCBodyList()
+    local charactersFolder = workspace:FindFirstChild("Characters")
+    if not charactersFolder then
+        return {"No hay NPCs Body"}
+    end
+
+    local npcBodyList = {}
+    local uniqueNPCs = {}
+
+    for _, npc in ipairs(charactersFolder:GetChildren()) do
+        if npc:IsA("Model") then
+            local nameLower = npc.Name:lower()
+            if nameLower:find("body") then
+                if not uniqueNPCs[npc.Name] then
+                    uniqueNPCs[npc.Name] = true
+                    table.insert(npcBodyList, npc.Name)
+                end
+            end
+        end
+    end
+
+    table.sort(npcBodyList)
+    return #npcBodyList > 0 and npcBodyList or {"No hay NPCs Body"}
+end
+
 -- Función para mover item hacia un jugador usando Remote Events
 local function moveItemToPlayer(item, targetPlayer)
     if not item or not item:IsDescendantOf(workspace) then return false end
@@ -2278,6 +2305,35 @@ local function moveItemToPlayer(item, targetPlayer)
         item:SetPrimaryPartCFrame(CFrame.new(targetRoot.Position + Vector3.new(math.random(-3, 3), 5, math.random(-3, 3))))
         task.wait(0.05)
         remoteEvents.StopDraggingItem:FireServer(item)
+    end)
+    
+    return success
+end
+
+-- 🆕 Función para mover NPC hacia un jugador usando Remote Events
+local function moveNPCToPlayer(npc, targetPlayer)
+    if not npc or not npc:IsDescendantOf(workspace) then return false end
+    if not targetPlayer or not targetPlayer.Character then return false end
+    
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return false end
+    
+    -- Buscar la parte principal del NPC
+    local npcPart = npc.PrimaryPart or npc:FindFirstChildWhichIsA("BasePart")
+    if not npcPart then return false end
+
+    -- Establecer PrimaryPart si no existe
+    if not npc.PrimaryPart then
+        pcall(function() npc.PrimaryPart = npcPart end)
+    end
+
+    local success = pcall(function()
+        -- Usar el mismo sistema de Remote Events que los items
+        remoteEvents.RequestStartDraggingItem:FireServer(npc)
+        task.wait(0.05)
+        npc:SetPrimaryPartCFrame(CFrame.new(targetRoot.Position + Vector3.new(math.random(-3, 3), 5, math.random(-3, 3))))
+        task.wait(0.05)
+        remoteEvents.StopDraggingItem:FireServer(npc)
     end)
     
     return success
@@ -2338,15 +2394,12 @@ local function giveKillAuraLoop()
 
         local tool, damageID = getAnyToolWithDamageID()
         if tool and damageID then
-            -- Buscar la carpeta Characters en workspace
             local charactersFolder = workspace:FindFirstChild("Characters")
             if charactersFolder then
-                -- Atacar a todos los NPCs cerca del jugador seleccionado (NO cerca de ti)
                 for _, mob in ipairs(charactersFolder:GetChildren()) do
                     if mob:IsA("Model") then
                         local mobPart = mob:FindFirstChildWhichIsA("BasePart")
                         if mobPart then
-                            -- IMPORTANTE: Calcular distancia desde el jugador seleccionado, NO desde ti
                             local distanceFromTarget = (mobPart.Position - targetRoot.Position).Magnitude
                             
                             if distanceFromTarget <= giveKillAuraRadius then
@@ -2372,7 +2425,7 @@ end
 
 PlayersTab:CreateParagraph({
     Title = "ℹ️ Información",
-    Content = "Envía items a otros jugadores sin importar si estás muerto."
+    Content = "Envía items y NPCs a otros jugadores sin importar si estás muerto."
 })
 
 -- Dropdown de selección de jugador
@@ -2396,6 +2449,12 @@ local PlayerDropdown = PlayersTab:CreateDropdown({
     end
 })
 
+-- ═══════════════════════════════════════════════════════
+-- 📦 SECCIÓN: ENVIAR ITEMS
+-- ═══════════════════════════════════════════════════════
+
+PlayersTab:CreateSection("📤 Enviar Items")
+
 -- Dropdown de selección de item (sin cofres)
 local ItemForPlayerDropdown = PlayersTab:CreateDropdown({
     Name = "📦 Seleccionar Item",
@@ -2409,8 +2468,6 @@ local ItemForPlayerDropdown = PlayersTab:CreateDropdown({
         notify("📦 Item Seleccionado", selectedItem, 2)
     end
 })
-
-PlayersTab:CreateSection("📤 Enviar Items")
 
 -- Botón para enviar UN item
 PlayersTab:CreateButton({
@@ -2437,7 +2494,6 @@ PlayersTab:CreateButton({
             return
         end
         
-        -- Buscar el primer item del tipo seleccionado
         for _, item in ipairs(itemsFolder:GetChildren()) do
             if item.Name == selectedItemForPlayer then
                 local success = moveItemToPlayer(item, selectedTargetPlayer)
@@ -2451,7 +2507,7 @@ PlayersTab:CreateButton({
             end
         end
         
-        notify("❌ Error", "No se encontró: " .. selectedItemForPlayer, 2)
+        notify("❌ Error", "Item no encontrado", 2)
     end
 })
 
@@ -2488,7 +2544,7 @@ PlayersTab:CreateButton({
                 local success = moveItemToPlayer(item, selectedTargetPlayer)
                 if success then
                     itemsSent = itemsSent + 1
-                    task.wait(0.1) -- Pequeña pausa entre envíos
+                    task.wait(0.1)
                 end
             end
         end
@@ -2501,6 +2557,124 @@ PlayersTab:CreateButton({
         end
     end
 })
+
+-- ═══════════════════════════════════════════════════════
+-- 👻 SECCIÓN: ENVIAR NPCs BODY (MUERTOS)
+-- ═══════════════════════════════════════════════════════
+
+PlayersTab:CreateSection("👻 Enviar NPCs (Body)")
+
+PlayersTab:CreateParagraph({
+    Title = "💀 NPCs Muertos",
+    Content = "Envía cuerpos de NPCs (con 'Body' en el nombre) al jugador seleccionado."
+})
+
+-- Dropdown de selección de NPC Body
+local NPCBodyDropdown = PlayersTab:CreateDropdown({
+    Name = "💀 Seleccionar NPC Body",
+    Options = getNPCBodyList(),
+    Callback = function(selectedNPC)
+        if selectedNPC == "No hay NPCs Body" then 
+            selectedNPCBody = nil
+            return 
+        end
+        selectedNPCBody = selectedNPC
+        notify("💀 NPC Body Seleccionado", selectedNPC, 2)
+    end
+})
+
+-- Botón para enviar UN NPC Body
+PlayersTab:CreateButton({
+    Name = "👻 Enviar 1 NPC Body al Jugador",
+    Callback = function()
+        if not selectedTargetPlayer then
+            notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
+            return
+        end
+        
+        if not selectedNPCBody then
+            notify("⚠️ Aviso", "Selecciona un NPC Body primero", 2)
+            return
+        end
+        
+        if not selectedTargetPlayer.Character or not selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "El jugador no tiene personaje válido", 2)
+            return
+        end
+        
+        local charactersFolder = workspace:FindFirstChild("Characters")
+        if not charactersFolder then
+            notify("❌ Error", "Carpeta 'Characters' no encontrada", 2)
+            return
+        end
+        
+        for _, npc in ipairs(charactersFolder:GetChildren()) do
+            if npc.Name == selectedNPCBody then
+                local success = moveNPCToPlayer(npc, selectedTargetPlayer)
+                if success then
+                    notify("✅ NPC Enviado", 
+                        string.format("'%s' → %s", selectedNPCBody, selectedTargetPlayer.Name), 3)
+                else
+                    notify("❌ Error", "No se pudo enviar el NPC", 2)
+                end
+                return
+            end
+        end
+        
+        notify("❌ Error", "NPC Body no encontrado", 2)
+    end
+})
+
+-- Botón para enviar TODOS los NPCs Body del mismo tipo
+PlayersTab:CreateButton({
+    Name = "💀 Enviar TODOS los NPCs Body del Mismo Tipo",
+    Callback = function()
+        if not selectedTargetPlayer then
+            notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
+            return
+        end
+        
+        if not selectedNPCBody then
+            notify("⚠️ Aviso", "Selecciona un NPC Body primero", 2)
+            return
+        end
+        
+        if not selectedTargetPlayer.Character or not selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "El jugador no tiene personaje válido", 2)
+            return
+        end
+        
+        local charactersFolder = workspace:FindFirstChild("Characters")
+        if not charactersFolder then
+            notify("❌ Error", "Carpeta 'Characters' no encontrada", 2)
+            return
+        end
+        
+        local npcsSent = 0
+        local targetName = selectedNPCBody:lower()
+        
+        for _, npc in ipairs(charactersFolder:GetChildren()) do
+            if npc.Name:lower() == targetName then
+                local success = moveNPCToPlayer(npc, selectedTargetPlayer)
+                if success then
+                    npcsSent = npcsSent + 1
+                    task.wait(0.1)
+                end
+            end
+        end
+        
+        if npcsSent > 0 then
+            notify("✅ NPCs Enviados", 
+                string.format("%d '%s' → %s", npcsSent, selectedNPCBody, selectedTargetPlayer.Name), 3)
+        else
+            notify("❌ Error", "No se encontró ningún " .. selectedNPCBody, 2)
+        end
+    end
+})
+
+-- ═══════════════════════════════════════════════════════
+-- ⚔️ SECCIÓN: KILL AURA PARA JUGADOR
+-- ═══════════════════════════════════════════════════════
 
 PlayersTab:CreateSection("⚔️ Kill Aura para Jugador")
 
@@ -2551,9 +2725,12 @@ PlayersTab:CreateParagraph({
     Content = "• Necesitas tener una herramienta de daño en TU inventario\n• Los mobs CERCA DEL JUGADOR SELECCIONADO serán atacados\n• NO ataca mobs cerca de ti, solo cerca de él\n• Funciona aunque estés muerto"
 })
 
+-- ═══════════════════════════════════════════════════════
+-- 👁️ SECCIÓN: ESPECTADOR
+-- ═══════════════════════════════════════════════════════
+
 PlayersTab:CreateSection("👁️ Espectador")
 
--- Toggle para espectar jugador
 PlayersTab:CreateToggle({
     Name = "👁️ Espectar Jugador Seleccionado",
     CurrentValue = false,
@@ -2569,7 +2746,6 @@ PlayersTab:CreateToggle({
                 return
             end
             
-            -- Guardar cámara original
             local camera = workspace.CurrentCamera
             if not originalCamera then
                 originalCamera = camera.CameraSubject
@@ -2578,7 +2754,6 @@ PlayersTab:CreateToggle({
             spectatingPlayer = selectedTargetPlayer
             camera.CameraSubject = selectedTargetPlayer.Character.Humanoid
             
-            -- Conexión para mantener el espectador actualizado
             spectateConnection = RunService.RenderStepped:Connect(function()
                 if spectatingPlayer and spectatingPlayer.Character and spectatingPlayer.Character:FindFirstChild("Humanoid") then
                     camera.CameraSubject = spectatingPlayer.Character.Humanoid
@@ -2596,18 +2771,21 @@ PlayersTab:CreateToggle({
     end
 })
 
+-- ═══════════════════════════════════════════════════════
+-- 💡 SECCIÓN: CONSEJOS
+-- ═══════════════════════════════════════════════════════
 
 PlayersTab:CreateParagraph({
     Title = "💡 Consejos",
-    Content = "• Funciona incluso si estás muerto\n• El espectador se actualiza automáticamente\n• El dropdown de items se actualiza solo\n• Kill Aura ataca mobs CERCA DEL JUGADOR, no cerca de ti\n• Los items se envían cerca del jugador seleccionado"
+    Content = "• Funciona incluso si estás muerto\n• El espectador se actualiza automáticamente\n• Los dropdowns se actualizan solos\n• Kill Aura ataca mobs CERCA DEL JUGADOR, no cerca de ti\n• Los items y NPCs se envían cerca del jugador seleccionado\n• Los NPCs Body son cuerpos de enemigos muertos"
 })
 
 -- ═══════════════════════════════════════════════════════
--- 🔄 SISTEMA DE AUTO-ACTUALIZACIÓN DE ITEMS
+-- 🔄 SISTEMA DE AUTO-ACTUALIZACIÓN
 -- ═══════════════════════════════════════════════════════
 
--- Sistema inteligente de actualización del dropdown de items
 local itemUpdatePending = false
+local npcBodyUpdatePending = false
 
 local function scheduleItemDropdownUpdate()
     if not itemUpdatePending then
@@ -2624,7 +2802,22 @@ local function scheduleItemDropdownUpdate()
     end
 end
 
--- Detectar cuando se añaden items al workspace
+local function scheduleNPCBodyDropdownUpdate()
+    if not npcBodyUpdatePending then
+        npcBodyUpdatePending = true
+        task.delay(1.5, function()
+            local newNPCBodyList = getNPCBodyList()
+            if NPCBodyDropdown and typeof(NPCBodyDropdown.UpdateOnClose) == "function" then
+                pcall(function()
+                    NPCBodyDropdown:UpdateOnClose(newNPCBodyList)
+                end)
+            end
+            npcBodyUpdatePending = false
+        end)
+    end
+end
+
+-- Detectar cuando se añaden/eliminan items
 if itemFolder then
     itemFolder.ChildAdded:Connect(function(item)
         scheduleItemDropdownUpdate()
@@ -2635,14 +2828,21 @@ if itemFolder then
     end)
 end
 
--- Actualización inicial después de 1 segundo
+-- Detectar cuando se añaden/eliminan NPCs
+if characterFolder then
+    characterFolder.ChildAdded:Connect(function(npc)
+        scheduleNPCBodyDropdownUpdate()
+    end)
+    
+    characterFolder.ChildRemoved:Connect(function(npc)
+        scheduleNPCBodyDropdownUpdate()
+    end)
+end
+
+-- Actualización inicial
 task.delay(1, function()
-    local newItemList = getItemListNoChests()
-    if ItemForPlayerDropdown and typeof(ItemForPlayerDropdown.UpdateOnClose) == "function" then
-        pcall(function()
-            ItemForPlayerDropdown:UpdateOnClose(newItemList)
-        end)
-    end
+    scheduleItemDropdownUpdate()
+    scheduleNPCBodyDropdownUpdate()
 end)
 
 -- Limpiar al cerrar/resetear
@@ -2651,6 +2851,8 @@ player.CharacterRemoving:Connect(function()
         stopSpectating()
     end
 end)
+
+
 -- ═══════════════════════════════════════════════════════
 -- 👁️ TAB: ESP
 -- ═══════════════════════════════════════════════════════
@@ -3235,4 +3437,3 @@ SettingsTab:CreateButton({
         notify("✅ Limpieza", "Todas las funciones desactivadas", 3)
     end
 })
-

@@ -1,7 +1,7 @@
--- ╔══════════════════════════════════════════════════════╗
--- ║  🌙 HUB 99 NOCHES EN EL BOSQUE - JMODSLIB V2.0     ║
--- ║  Adaptado para JmodsLib por joao_mods              ║
--- ╚══════════════════════════════════════════════════════╝
+-- ╔═══════════════════════════════════════════════════════╗
+-- ║  🌙 J99 - HUB COMPLETO 99 NOCHES EN EL BOSQUE V3.0   ║
+-- ║  Fusión de joao_mods
+-- ╚═══════════════════════════════════════════════════════╝
 
 -- ⚡ Cargar JmodsLib
 local JmodsLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/pruebasjoao/test/refs/heads/main/JmodsLibV1.0'))()
@@ -12,9 +12,14 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
+
+-- 🔗 Remote Events
+local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- 📊 Variables globales
 local connections = {}
@@ -29,22 +34,35 @@ local antiAFKEnabled = false
 local fullbrightEnabled = false
 local wallHackEnabled = false
 local autoClickEnabled = false
+local killAuraEnabled = false
+local itemESPEnabled = false
+local playerESPEnabled = false
+local chamsEnabled = false
 
 -- Configuración
 local flySpeed = 50
+local killAuraRadius = 200
 local originalWalkSpeed = humanoid.WalkSpeed or 16
 local originalJumpPower = humanoid.JumpPower or 50
 local originalAmbient = Lighting.Ambient
 local originalBrightness = Lighting.Brightness
 local originalOutdoorAmbient = Lighting.OutdoorAmbient
 
+-- Referencias de workspace
+local itemFolder = workspace:WaitForChild("Items")
+local characterFolder = workspace:WaitForChild("Characters")
+
+-- Posiciones para auto farm
+local campfireDropPos = Vector3.new(0, 19, 0)
+local machineDropPos = Vector3.new(21, 16, -5)
+
 -- 🪟 Crear ventana principal
 local Window = JmodsLib:CreateWindow({
     Name = "J99",
     Icon = 128308831323216,
-    LoadingTitle = "Cargando Jmods 99",
+    LoadingTitle = "Cargando J99 Hub",
     LoadingSubtitle = "Preparando funciones...",
-    Theme = "oscuro neon",
+    Theme = "neon",
     Intro = true,   
     IntroIcon = 128308831323216,
     AnimationIntro = 0,
@@ -73,6 +91,33 @@ local function getItemPart(item)
         return item
     end
     return nil
+end
+
+-- 🔄 Convertir string a CFrame
+local function stringToCFrame(str)
+    local x, y, z = str:match("([^,]+),%s*([^,]+),%s*([^,]+)")
+    x, y, z = tonumber(x), tonumber(y), tonumber(z)
+    if x and y and z then
+        return CFrame.new(x, y, z)
+    end
+    return nil
+end
+
+-- 🚀 Teletransportar con tween
+local function teleportToTarget(cf, duration)
+    local char = player.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if duration and duration > 0 then
+        local info = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+        local goal = { CFrame = cf }
+        local tween = TweenService:Create(hrp, info, goal)
+        tween:Play()
+    else
+        hrp.CFrame = cf
+    end
 end
 
 -- 🚀 FUNCIÓN: Toggle Fly
@@ -331,7 +376,26 @@ local function toggleAntiAFK(state)
     end
 end
 
--- 📦 FUNCIÓN: Auto Collect Items
+-- 📦 FUNCIÓN: Mover item a posición usando Remote Events
+local function moveItemToPos(item, position)
+    if not item or not item:IsDescendantOf(workspace) then return end
+    local part = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
+    if not part then return end
+
+    if not item.PrimaryPart then
+        pcall(function() item.PrimaryPart = part end)
+    end
+
+    pcall(function()
+        remoteEvents.RequestStartDraggingItem:FireServer(item)
+        task.wait(0.05)
+        item:SetPrimaryPartCFrame(CFrame.new(position))
+        task.wait(0.05)
+        remoteEvents.StopDraggingItem:FireServer(item)
+    end)
+end
+
+-- 📦 FUNCIÓN: Auto Collect Items (básico)
 local function autoCollectItems()
     if not character or not character:FindFirstChild("HumanoidRootPart") then
         notify("❌ Error", "Personaje no encontrado", 2)
@@ -339,51 +403,18 @@ local function autoCollectItems()
     end
     
     local root = character.HumanoidRootPart
-    local itemsFolder = workspace:FindFirstChild("Items")
-    if not itemsFolder then
-        notify("❌ Error", "Carpeta 'Items' no encontrada", 2)
-        return
-    end
-    
     local itemsCollected = 0
-    for _, item in ipairs(itemsFolder:GetChildren()) do
+    for _, item in ipairs(itemFolder:GetChildren()) do
         if item:IsA("Model") or item:IsA("BasePart") then
             local part = getItemPart(item)
             if part and (part.Position - root.Position).Magnitude <= 50 then
-                part.CFrame = root.CFrame
+                moveItemToPos(item, root.Position)
                 itemsCollected = itemsCollected + 1
             end
         end
     end
     
     notify("✅ Items Recolectados", "Total: " .. itemsCollected, 2)
-end
-
--- 🔄 FUNCIÓN: Toggle Auto-Farm
-local function toggleAutoFarm(state)
-    autoFarmEnabled = state
-    
-    if autoFarmEnabled then
-        if connections.autoFarm then
-            task.cancel(connections.autoFarm)
-        end
-        
-        connections.autoFarm = task.spawn(function()
-            while autoFarmEnabled do
-                autoCollectItems()
-                task.wait(1)
-            end
-        end)
-        
-        notify("✅ Auto-Farm ON", "Recolección automática activa", 2)
-    else
-        if connections.autoFarm then
-            task.cancel(connections.autoFarm)
-            connections.autoFarm = nil
-        end
-        
-        notify("❌ Auto-Farm OFF", "Recolección manual", 2)
-    end
 end
 
 -- 👁️ FUNCIÓN: Crear ESP
@@ -398,8 +429,8 @@ local function createESP(obj, color, text)
     billboard.Adornee = part
     billboard.Size = UDim2.new(0, 120, 0, 50)
     billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.AlwaysOnTop = true -- 🔥 Hace visible el ESP aunque haya objetos enfrente
-    billboard.MaxDistance = 10000 -- Opcional: visible a distancia larga
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = 10000
     billboard.Parent = part
     
     local frame = Instance.new("Frame")
@@ -422,42 +453,11 @@ local function createESP(obj, color, text)
     espObjects[obj] = billboard
 end
 
-
 local function removeESP(obj)
     if espObjects[obj] then
         espObjects[obj]:Destroy()
         espObjects[obj] = nil
     end
-end
-
--- 📦 FUNCIÓN: Traer items específicos
-local function bringSpecificItems(itemName)
-    if not character or not character:FindFirstChild("HumanoidRootPart") then
-        notify("❌ Error", "Personaje no encontrado", 2)
-        return
-    end
-    
-    local root = character.HumanoidRootPart
-    local itemsFolder = workspace:FindFirstChild("Items")
-    if not itemsFolder then
-        notify("❌ Error", "Carpeta 'Items' no encontrada", 2)
-        return
-    end
-    
-    local targetName = itemName:lower()
-    local itemsBrought = 0
-    
-    for _, obj in ipairs(itemsFolder:GetChildren()) do
-        if obj.Name:lower() == targetName then
-            local part = getItemPart(obj)
-            if part then
-                part.CFrame = root.CFrame + Vector3.new(math.random(-5,5), 5, math.random(-5,5))
-                itemsBrought = itemsBrought + 1
-            end
-        end
-    end
-    
-    notify("✅ Items Traídos", "'" .. itemName .. "': " .. itemsBrought, 2)
 end
 
 -- 📍 FUNCIÓN: Teletransporte a item
@@ -479,18 +479,92 @@ local function teleportToItem(item)
     end
 end
 
+-- ⚔️ FUNCIÓN: Kill Aura
+local toolsDamageIDs = {
+    ["Old Axe"] = "1_8982038982",
+    ["Good Axe"] = "112_8982038982",
+    ["Strong Axe"] = "116_8982038982",
+    ["Chainsaw"] = "647_8992824875",
+    ["Spear"] = "196_8999010016"
+}
+
+local function getAnyToolWithDamageID()
+    local plr = player
+    if not plr:FindFirstChild("Inventory") then return nil, nil end
+    
+    for toolName, damageID in pairs(toolsDamageIDs) do
+        local tool = plr.Inventory:FindFirstChild(toolName)
+        if tool then
+            return tool, damageID
+        end
+    end
+    return nil, nil
+end
+
+local function equipTool(tool)
+    if tool then
+        remoteEvents.EquipItemHandle:FireServer("FireAllClients", tool)
+    end
+end
+
+local function unequipTool(tool)
+    if tool then
+        remoteEvents.UnequipItemHandle:FireServer("FireAllClients", tool)
+    end
+end
+
+local function killAuraLoop()
+    while killAuraEnabled do
+        local char = player.Character
+        if not char then 
+            task.wait(0.5)
+            continue
+        end
+        
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then 
+            task.wait(0.5)
+            continue
+        end
+
+        local tool, damageID = getAnyToolWithDamageID()
+        if tool and damageID then
+            equipTool(tool)
+
+            for _, mob in ipairs(characterFolder:GetChildren()) do
+                if mob:IsA("Model") then
+                    local part = mob:FindFirstChildWhichIsA("BasePart")
+                    if part and (part.Position - hrp.Position).Magnitude <= killAuraRadius then
+                        pcall(function()
+                            remoteEvents.ToolDamageObject:InvokeServer(
+                                mob,
+                                tool,
+                                damageID,
+                                CFrame.new(part.Position)
+                            )
+                        end)
+                    end
+                end
+            end
+            task.wait(0.1)
+        else
+            task.wait(1)
+        end
+    end
+end
+
 -- ═══════════════════════════════════════════════════════
 -- 🎨 CREAR TABS DE LA INTERFAZ
 -- ═══════════════════════════════════════════════════════
 
--- 📑 TAB: PRINCIPAL
+-- 🏠 TAB: PRINCIPAL
 local MainTab = Window:CreateTab("🏠 Principal")
 
 MainTab:CreateSection("📋 Información del Hub")
 
 MainTab:CreateParagraph({
-    Title = "Hub de 99 Noches en el Bosque",
-    Content = "Creado por joao_mods con JmodsLib.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    Title = "J99",
+    Content = "joao_mods"
 })
 
 MainTab:CreateButton({
@@ -500,6 +574,16 @@ MainTab:CreateButton({
         if setclipboard then
             setclipboard("https://youtube.com/@joao_mods0")
         end
+    end
+})
+
+MainTab:CreateButton({
+    Name = "💬 Discord",
+    Callback = function()
+        if setclipboard then
+            setclipboard("https://discord.gg/ZTVC94ZmVZ")
+        end
+        notify("💬 Discord", "Enlace copiado al portapapeles", 3)
     end
 })
 
@@ -513,7 +597,7 @@ MainTab:CreateButton({
 })
 
 MainTab:CreateButton({
-    Name = "📍 Ir al Spawn",
+    Name = "🏠 Ir al Spawn",
     Callback = function()
         if not character or not character:FindFirstChild("HumanoidRootPart") then
             notify("❌ Error", "Personaje no encontrado", 2)
@@ -548,22 +632,156 @@ MainTab:CreateButton({
     end
 })
 
--- ═══════════════════════════════════════════════════════
--- 🌍 TOGGLE: DESBLOQUEAR TODO EL MAPA (AUTO DESACTIVACIÓN + VELOCIDAD AJUSTADA)
--- ═══════════════════════════════════════════════════════
+-- Safe Zone
+MainTab:CreateSection("🌍 Safe Zone")
 
+local safezoneBaseplates = {}
+local baseplateSize = Vector3.new(2048, 1, 2048)
+local baseY = 100
+local centerPos = Vector3.new(0, baseY, 0)
+
+for dx = -1, 1 do
+    for dz = -1, 1 do
+        local pos = centerPos + Vector3.new(dx * baseplateSize.X, 0, dz * baseplateSize.Z)
+        local baseplate = Instance.new("Part")
+        baseplate.Name = "SafeZoneBaseplate"
+        baseplate.Size = baseplateSize
+        baseplate.Position = pos
+        baseplate.Anchored = true
+        baseplate.CanCollide = true
+        baseplate.Transparency = 1
+        baseplate.Color = Color3.fromRGB(255, 255, 255)
+        baseplate.Parent = workspace
+        table.insert(safezoneBaseplates, baseplate)
+    end
+end
+
+MainTab:CreateToggle({
+    Name = "Mostrar Safe Zone",
+    CurrentValue = false,
+    Callback = function(enabled)
+        for _, baseplate in ipairs(safezoneBaseplates) do
+            baseplate.Transparency = enabled and 0.8 or 1
+            baseplate.CanCollide = enabled
+        end
+        
+        notify("Safe Zone", enabled and "Safe Zone visible" or "Safe Zone oculta", 3)
+    end
+})
+
+-- Stronghold
+MainTab:CreateSection("🏰 Stronghold")
+
+MainTab:CreateButton({
+    Name = "🏰 TP a Stronghold",
+    Callback = function()
+        local success, result = pcall(function()
+            local targetPart = workspace.Map.Landmarks.Stronghold.Functional.EntryDoors.DoorRight.Model
+            if targetPart then
+                local children = targetPart:GetChildren()
+                local destination = children[5]
+
+                if destination and destination:IsA("BasePart") then
+                    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.CFrame = destination.CFrame + Vector3.new(0, 5, 0)
+                        return true
+                    end
+                end
+            end
+            return false
+        end)
+        
+        if success and result then
+            notify("Teleport", "Teletransportado al Stronghold", 3)
+        else
+            notify("Error", "No se pudo encontrar el Stronghold", 3)
+        end
+    end
+})
+
+MainTab:CreateButton({
+    Name = "💎 TP a Diamond Chest",
+    Callback = function()
+        local success, result = pcall(function()
+            local items = workspace:FindFirstChild("Items")
+            if not items then return false end
+
+            local chest = items:FindFirstChild("Stronghold Diamond Chest")
+            if not chest then return false end
+
+            local chestLid = chest:FindFirstChild("ChestLid")
+            if not chestLid then return false end
+
+            local diamondchest = chestLid:FindFirstChild("Meshes/diamondchest_Cube.002")
+            if not diamondchest then return false end
+
+            local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = diamondchest.CFrame + Vector3.new(0, 5, 0)
+                return true
+            end
+            return false
+        end)
+        
+        if success and result then
+            notify("Teleport", "Teletransportado al Diamond Chest", 3)
+        else
+            notify("Error", "No se encontró el Diamond Chest", 3)
+        end
+    end
+})
+
+-- Combat System
+MainTab:CreateSection("⚔️ Sistema de Combate")
+
+MainTab:CreateToggle({
+    Name = "⚔️ Kill Aura",
+    CurrentValue = false,
+    Callback = function(state)
+        killAuraEnabled = state
+        if state then
+            task.spawn(killAuraLoop)
+            notify("Kill Aura", "Kill Aura activado - Radio: " .. killAuraRadius, 3)
+        else
+            local tool, _ = getAnyToolWithDamageID()
+            if tool then unequipTool(tool) end
+            notify("Kill Aura", "Kill Aura desactivado", 2)
+        end
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "Radio de Kill Aura",
+    Range = {20, 500},
+    Increment = 5,
+    CurrentValue = 200,
+    Suffix = " studs",
+    Callback = function(value)
+        killAuraRadius = value
+    end
+})
+
+MainTab:CreateToggle({
+    Name = "🖱️ Auto-Click",
+    CurrentValue = false,
+    Callback = function(state)
+        toggleAutoClick(state)
+    end
+})
+
+-- Desbloquear Mapa
 local unlockingMap = false
 local originalCFrame = nil
 local unlockThread = nil
 
 MainTab:CreateToggle({
-    Name = "🌍 Mapa",
+    Name = "🌍 Desbloquear Mapa",
     CurrentValue = false,
     Callback = function(state)
         unlockingMap = state
 
         if unlockingMap then
-            -- Guardar posición original del jugador
             if character and character:FindFirstChild("HumanoidRootPart") then
                 originalCFrame = character.HumanoidRootPart.CFrame
             else
@@ -572,7 +790,6 @@ MainTab:CreateToggle({
                 return
             end
 
-            -- Obtener punto central del mapa (Spawn)
             local centerPos
             local map = workspace:FindFirstChild("Map")
             if map and map:FindFirstChild("SpawnLocation") then
@@ -581,47 +798,39 @@ MainTab:CreateToggle({
                 centerPos = Vector3.new(0, 0, 0)
             end
 
-
-            -- Movimiento circular con radio creciente
             unlockThread = task.spawn(function()
                 local root = character:WaitForChild("HumanoidRootPart")
                 local angle = 0
                 local radius = 150
                 local height = 200
-                local angularSpeed = 0.9     -- 🔹 Giro más controlado
-                local radiusGrowth = 0.9      -- 🔹 Expansión más suave
+                local angularSpeed = 0.9
+                local radiusGrowth = 0.9
 
                 local startTime = tick()
                 while unlockingMap and root do
-                    -- Si pasaron 30 segundos → se detiene solo
                     if tick() - startTime >= 55 then
                         unlockingMap = false
                         break
                     end
 
-                    -- Calcular posición circular
                     local x = centerPos.X + math.cos(angle) * radius
                     local z = centerPos.Z + math.sin(angle) * radius
                     local y = centerPos.Y + height
 
-                    -- Mover con CFrame (mirando hacia el centro)
                     root.CFrame = CFrame.new(Vector3.new(x, y, z), centerPos)
 
-                    -- Incrementos suaves
                     angle += angularSpeed
                     radius += radiusGrowth
 
-                    task.wait(0.03) -- 🔹 Un poco más lento y estable
+                    task.wait(0.03)
                 end
 
-                -- Auto-desactivación y retorno
                 if originalCFrame and character and character:FindFirstChild("HumanoidRootPart") then
                     character.HumanoidRootPart.CFrame = originalCFrame
                     notify("✅ Desbloqueo Completado", "Exploración finalizada automáticamente", 3)
                 end
             end)
         else
-            -- Manualmente desactivado
             if unlockThread then
                 task.cancel(unlockThread)
                 unlockThread = nil
@@ -637,31 +846,76 @@ MainTab:CreateToggle({
     end
 })
 
-
-
-MainTab:CreateToggle({
-    Name = "🖱️ Auto-Click",
-    CurrentValue = false,
-    Callback = function(state)
-        toggleAutoClick(state)
-    end
-})
-
-
+-- ═══════════════════════════════════════════════════════
 -- 🎮 TAB: JUGADOR
+-- ═══════════════════════════════════════════════════════
+
 local PlayerTab = Window:CreateTab("🎮 Jugador")
 
 PlayerTab:CreateSection("⚙️ Modificadores del Jugador")
 
+-- Sistema de WalkSpeed persistente
+_G.HackedWalkSpeed = _G.HackedWalkSpeed or 16
+
+local function applyWalkSpeed(hum)
+    if not hum then return end
+    hum.WalkSpeed = _G.HackedWalkSpeed
+    
+    hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+        if hum.WalkSpeed ~= _G.HackedWalkSpeed then
+            hum.WalkSpeed = _G.HackedWalkSpeed
+        end
+    end)
+end
+
+if player.Character and player.Character:FindFirstChild("Humanoid") then
+    applyWalkSpeed(player.Character.Humanoid)
+end
+
+player.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid", 5)
+    if hum then
+        applyWalkSpeed(hum)
+    end
+end)
+
 PlayerTab:CreateSlider({
     Name = "🏃 Velocidad de Caminata",
-    Range = {16, 200},
+    Range = {16, 700},
     Increment = 1,
     Suffix = " studs/s",
     CurrentValue = originalWalkSpeed,
     Callback = function(value)
+        _G.HackedWalkSpeed = value
         if humanoid then
-            humanoid.WalkSpeed = value
+            applyWalkSpeed(humanoid)
+        end
+    end
+})
+
+PlayerTab:CreateToggle({
+    Name = "⚡ Velocidad Rápida (50)",
+    CurrentValue = false,
+    Callback = function(toggle)
+        _G.HackedWalkSpeed = toggle and 50 or 16
+        
+        local char = player.Character
+        if char and char:FindFirstChild("Humanoid") then
+            applyWalkSpeed(char.Humanoid)
+        end
+    end
+})
+
+PlayerTab:CreateSlider({
+    Name = "🦘 Poder de Salto",
+    Range = {50, 700},
+    Increment = 5,
+    CurrentValue = 50,
+    Suffix = " poder",
+    Callback = function(value)
+        local char = player.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = value
         end
     end
 })
@@ -673,7 +927,6 @@ PlayerTab:CreateToggle({
         toggleInfiniteJump(state)
     end
 })
-
 
 PlayerTab:CreateSection("🚀 Habilidades Especiales")
 
@@ -704,8 +957,6 @@ PlayerTab:CreateToggle({
     end
 })
 
-
-
 PlayerTab:CreateToggle({
     Name = "💤 Anti-AFK",
     CurrentValue = false,
@@ -714,26 +965,30 @@ PlayerTab:CreateToggle({
     end
 })
 
+-- ═══════════════════════════════════════════════════════
 -- 📦 TAB: ITEMS
+-- ═══════════════════════════════════════════════════════
+
 local ItemsTab = Window:CreateTab("📦 Items")
 
 ItemsTab:CreateSection("🔍 Gestión de Items")
 
 ItemsTab:CreateParagraph({
     Title = "ℹ️ Instrucciones",
-    Content = "Selecciona un item del menú desplegable para teletransportarte o traerlo. Los menús se actualizan automáticamente."
+    Content = "Usa los menús desplegables para seleccionar items, cofres, NPCs o Lost Childs."
 })
 
 -- Variables para dropdowns
 local currentSelectedItem = nil
 local currentSelectedChest = nil
+local currentSelectedNPC = nil
+local currentSelectedLostChild = nil
 local itemDropdownOptions = {"Cargando items..."}
 local chestDropdownOptions = {"Cargando cofres..."}
 local npcDropdownOptions = {"Cargando NPCs..."}
+local lostChildDropdownOptions = {"Cargando LostChilds..."}
 
--- Función para obtener listas de items y cofres (únicos)
--- Función para obtener listas de items y cofres (permitir repetidos)
--- Función para obtener listas de items (únicos) y cofres (permitir repetidos)
+-- Función para obtener listas de items y cofres
 local function getItemLists()
     local itemsFolder = workspace:FindFirstChild("Items")
     if not itemsFolder then
@@ -746,11 +1001,9 @@ local function getItemLists()
 
     for _, item in ipairs(itemsFolder:GetChildren()) do
         local nameLower = item.Name:lower()
-        -- 🔹 Cofres → se agregan todos, incluso repetidos
         if nameLower:find("chest") or nameLower:find("cofre") then
             table.insert(chestNames, item.Name)
         else
-            -- 🔹 Items → solo únicos
             if not uniqueItems[item.Name] then
                 uniqueItems[item.Name] = true
                 table.insert(itemNames, item.Name)
@@ -764,9 +1017,6 @@ local function getItemLists()
            (#chestNames > 0 and chestNames or {"No hay cofres"})
 end
 
-
-
-
 -- Función para obtener lista de NPCs
 local function getNPCList()
     local npcsFolder = workspace:FindFirstChild("Characters")
@@ -776,9 +1026,12 @@ local function getNPCList()
     local uniqueNPCs = {}
     
     for _, npc in ipairs(npcsFolder:GetChildren()) do
-        if not uniqueNPCs[npc.Name] then
-            uniqueNPCs[npc.Name] = true
-            table.insert(npcNames, npc.Name)
+        local nameLower = npc.Name:lower()
+        if not (nameLower:find("lost") or nameLower:find("child")) then
+            if not uniqueNPCs[npc.Name] then
+                uniqueNPCs[npc.Name] = true
+                table.insert(npcNames, npc.Name)
+            end
         end
     end
     
@@ -786,14 +1039,33 @@ local function getNPCList()
     return #npcNames > 0 and npcNames or {"No hay NPCs"}
 end
 
--- Actualizar listas iniciales
+-- Función para obtener Lost Childs
+local function getLostChildList()
+    local charactersFolder = workspace:FindFirstChild("Characters")
+    if not charactersFolder then return {"No hay LostChilds"} end
+
+    local lostList = {}
+    local uniqueNames = {}
+
+    for _, npc in ipairs(charactersFolder:GetChildren()) do
+        local nameLower = npc.Name:lower()
+        if nameLower:find("lost") or nameLower:find("child") then
+            if not uniqueNames[npc.Name] then
+                uniqueNames[npc.Name] = true
+                table.insert(lostList, npc.Name)
+            end
+        end
+    end
+
+    table.sort(lostList)
+    return #lostList > 0 and lostList or {"No hay LostChilds"}
+end
+
 -- Actualizar listas iniciales
 itemDropdownOptions, chestDropdownOptions = getItemLists()
 npcDropdownOptions = getNPCList()
+lostChildDropdownOptions = getLostChildList()
 
-
--- Dropdown de Items
--- Dropdowns guardados
 -- Dropdown de Items
 local ItemsDropdown = ItemsTab:CreateDropdown({
     Name = "📦 Seleccionar Item",
@@ -805,7 +1077,6 @@ local ItemsDropdown = ItemsTab:CreateDropdown({
     end
 })
 
--- Botones para acciones con el item seleccionado
 ItemsTab:CreateButton({
     Name = "📍 Teleport al Item Seleccionado",
     Callback = function()
@@ -853,12 +1124,9 @@ ItemsTab:CreateButton({
         
         for _, item in ipairs(itemsFolder:GetChildren()) do
             if item.Name == currentSelectedItem then
-                local part = getItemPart(item)
-                if part then
-                    part.CFrame = root.CFrame + Vector3.new(0, 5, 0)
-                    notify("✅ Item Traído", currentSelectedItem, 2)
-                    return
-                end
+                moveItemToPos(item, root.Position + Vector3.new(0, 5, 0))
+                notify("✅ Item Traído", currentSelectedItem, 2)
+                return
             end
         end
         
@@ -874,11 +1142,34 @@ ItemsTab:CreateButton({
             return
         end
         
-        bringSpecificItems(currentSelectedItem)
+        if not character or not character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "Personaje no encontrado", 2)
+            return
+        end
+
+        local root = character.HumanoidRootPart
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if not itemsFolder then
+            notify("❌ Error", "Carpeta 'Items' no encontrada", 2)
+            return
+        end
+
+        local targetName = currentSelectedItem:lower()
+        local itemsBrought = 0
+
+        for _, obj in ipairs(itemsFolder:GetChildren()) do
+            if obj.Name:lower() == targetName then
+                moveItemToPos(obj, root.Position + Vector3.new(math.random(-5,5), 5, math.random(-5,5)))
+                itemsBrought = itemsBrought + 1
+                task.wait(0.1)
+            end
+        end
+
+        notify("✅ Items Traídos", "'" .. currentSelectedItem .. "': " .. itemsBrought, 2)
     end
 })
 
-ItemsTab:CreateSection("") -- Separador
+ItemsTab:CreateSection("")
 
 ItemsTab:CreateButton({
     Name = "🌟 Traer TODOS los Items (sin cofres)",
@@ -898,13 +1189,10 @@ ItemsTab:CreateButton({
         local itemsBrought = 0
         for _, item in ipairs(itemsFolder:GetChildren()) do
             local nameLower = item.Name:lower()
-            -- Ignorar cofres
             if not (nameLower:find("chest") or nameLower:find("cofre")) then
-                local part = getItemPart(item)
-                if part then
-                    part.CFrame = root.CFrame + Vector3.new(math.random(-5,5), 5, math.random(-5,5))
-                    itemsBrought = itemsBrought + 1
-                end
+                moveItemToPos(item, root.Position + Vector3.new(math.random(-5,5), 5, math.random(-5,5)))
+                itemsBrought = itemsBrought + 1
+                task.wait(0.05)
             end
         end
 
@@ -912,20 +1200,8 @@ ItemsTab:CreateButton({
     end
 })
 
-ItemsTab:CreateSection("🔄 Auto-Farm")
-
-ItemsTab:CreateToggle({
-    Name = "🔄 Auto-Farm Items",
-    CurrentValue = false,
-    Callback = function(state)
-        toggleAutoFarm(state)
-    end
-})
-
-
 -- === Cofres ===
 ItemsTab:CreateSection("💰 Cofres")
-
 
 local ChestDropdown = ItemsTab:CreateDropdown({
     Name = "💎 Seleccionar Cofre",
@@ -936,6 +1212,7 @@ local ChestDropdown = ItemsTab:CreateDropdown({
         notify("💰 Cofre Seleccionado", selectedChest, 2)
     end
 })
+
 ItemsTab:CreateButton({
     Name = "📍 Teleport al Cofre Seleccionado",
     Callback = function()
@@ -961,8 +1238,6 @@ ItemsTab:CreateButton({
     end
 })
 
-
--- 🔄 Toggle: TP aleatorio a cofres
 local randomChestTPEnabled = false
 local randomChestTPThread = nil
 
@@ -1011,15 +1286,8 @@ ItemsTab:CreateToggle({
     end
 })
 
-
-
--- ═════════════════════════════════════════════════════════════
--- 👾 SECCIÓN DE NPCs
--- ═════════════════════════════════════════════════════════════
-
+-- === NPCs ===
 ItemsTab:CreateSection("👾 Gestión de NPCs")
-
-local currentSelectedNPC = nil
 
 local NPCDropdown = ItemsTab:CreateDropdown({
     Name = "👾 Seleccionar NPC",
@@ -1031,7 +1299,6 @@ local NPCDropdown = ItemsTab:CreateDropdown({
     end
 })
 
--- Botones para acciones con el NPC seleccionado
 ItemsTab:CreateButton({
     Name = "📍 Teleport al NPC Seleccionado",
     Callback = function()
@@ -1062,7 +1329,7 @@ ItemsTab:CreateButton({
 })
 
 ItemsTab:CreateButton({
-    Name = "🎯 Traer NPC Seleccionado (uno)",
+    Name = "🎯 Traer NPC Seleccionado",
     Callback = function()
         if not currentSelectedNPC then
             notify("⚠️ Aviso", "Selecciona un NPC primero", 2)
@@ -1085,7 +1352,15 @@ ItemsTab:CreateButton({
             if npc.Name == currentSelectedNPC then
                 local part = getItemPart(npc)
                 if part then
-                    part.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+                    if npc.PrimaryPart then
+                        pcall(function()
+                            npc:SetPrimaryPartCFrame(root.CFrame + Vector3.new(0, 5, 0))
+                        end)
+                    else
+                        pcall(function()
+                            part.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+                        end)
+                    end
                     notify("✅ NPC Traído", currentSelectedNPC, 2)
                     return
                 end
@@ -1123,8 +1398,17 @@ ItemsTab:CreateButton({
             if npc.Name:lower() == targetName then
                 local part = getItemPart(npc)
                 if part then
-                    part.CFrame = root.CFrame + Vector3.new(math.random(-5,5), 5, math.random(-5,5))
+                    if npc.PrimaryPart then
+                        pcall(function()
+                            npc:SetPrimaryPartCFrame(root.CFrame + Vector3.new(math.random(-5,5), 5, math.random(-5,5)))
+                        end)
+                    else
+                        pcall(function()
+                            part.CFrame = root.CFrame + Vector3.new(math.random(-5,5), 5, math.random(-5,5))
+                        end)
+                    end
                     npcsBrought = npcsBrought + 1
+                    task.wait(0.1)
                 end
             end
         end
@@ -1133,46 +1417,9 @@ ItemsTab:CreateButton({
     end
 })
 
-
--- ═════════════════════════════════════════════════════════════
--- 👻 SECCIÓN DE LOST CHILD
--- ═════════════════════════════════════════════════════════════
-
--- ═════════════════════════════════════════════════════════════
--- 👻 SECCIÓN DE LOST CHILDS (CORREGIDO)
--- ═════════════════════════════════════════════════════════════
-
+-- === Lost Childs ===
 ItemsTab:CreateSection("👻 Lost Childs")
 
-local currentSelectedLostChild = nil
-local lostChildDropdownOptions = {"Cargando LostChilds..."}
-
--- 🧭 Función para obtener la lista de LostChilds desde workspace.Characters
-local function getLostChildList()
-    local charactersFolder = workspace:FindFirstChild("Characters")
-    if not charactersFolder then return {"No hay LostChilds"} end
-
-    local lostList = {}
-    local uniqueNames = {}
-
-    for _, npc in ipairs(charactersFolder:GetChildren()) do
-        local nameLower = npc.Name:lower()
-        if nameLower:find("lost") or nameLower:find("child") then
-            if not uniqueNames[npc.Name] then
-                uniqueNames[npc.Name] = true
-                table.insert(lostList, npc.Name)
-            end
-        end
-    end
-
-    table.sort(lostList)
-    return #lostList > 0 and lostList or {"No hay LostChilds"}
-end
-
--- Inicializar lista
-lostChildDropdownOptions = getLostChildList()
-
--- Crear dropdown de LostChilds
 local LostChildDropdown = ItemsTab:CreateDropdown({
     Name = "👻 Seleccionar Lost Child",
     Options = lostChildDropdownOptions,
@@ -1183,7 +1430,6 @@ local LostChildDropdown = ItemsTab:CreateDropdown({
     end
 })
 
--- 📍 Botón: Teleport al LostChild seleccionado
 ItemsTab:CreateButton({
     Name = "📍 Teleport al LostChild Seleccionado",
     Callback = function()
@@ -1214,28 +1460,13 @@ ItemsTab:CreateButton({
     end
 })
 
-
-
-
-
--- ═════════════════════════════════════════════════════════════
--- 🔄 SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA DE DROPDOWNS
--- ═════════════════════════════════════════════════════════════
--- ═════════════════════════════════════════════════════════════
--- 🔄 SISTEMA DE ACTUALIZACIÓN CON DEBOUNCE (ANTI-LAG)
--- ═════════════════════════════════════════════════════════════
-
--- ═════════════════════════════════════════════════════════════
--- 🔄 SISTEMA DE ACTUALIZACIÓN CON UpdateOnClose (SIN LAG)
--- ═════════════════════════════════════════════════════════════
-
+-- Sistema de actualización de dropdowns
 local function safeUpdateDropdownOnClose(dropdown, newOptions)
     if dropdown and typeof(dropdown.UpdateOnClose) == "function" then
         dropdown:UpdateOnClose(newOptions)
     end
 end
 
--- Función que prepara actualizaciones (solo se aplican al cerrar los dropdowns)
 local function refreshAllDropdowns()
     local newItemList, newChestList = getItemLists()
     safeUpdateDropdownOnClose(ItemsDropdown, newItemList)
@@ -1244,33 +1475,27 @@ local function refreshAllDropdowns()
     safeUpdateDropdownOnClose(LostChildDropdown, getLostChildList())
 end
 
--- 🔥 Debounce: evita actualizaciones excesivas
 local pendingUpdate = false
 local function scheduleUpdate()
     if not pendingUpdate then
         pendingUpdate = true
-        task.delay(1.5, function() -- Actualiza cada 1.5s (más rápido que antes)
+        task.delay(1.5, function()
             refreshAllDropdowns()
             pendingUpdate = false
         end)
     end
 end
 
--- 📦 Items y Cofres
-local itemsFolder = workspace:FindFirstChild("Items")
-if itemsFolder then
-    itemsFolder.ChildAdded:Connect(scheduleUpdate)
-    itemsFolder.ChildRemoved:Connect(scheduleUpdate)
+if itemFolder then
+    itemFolder.ChildAdded:Connect(scheduleUpdate)
+    itemFolder.ChildRemoved:Connect(scheduleUpdate)
 end
 
--- 👾 NPCs y LostChilds
-local charactersFolder = workspace:FindFirstChild("Characters")
-if charactersFolder then
-    charactersFolder.ChildAdded:Connect(scheduleUpdate)
-    charactersFolder.ChildRemoved:Connect(scheduleUpdate)
+if characterFolder then
+    characterFolder.ChildAdded:Connect(scheduleUpdate)
+    characterFolder.ChildRemoved:Connect(scheduleUpdate)
 end
 
--- 🔄 Actualización inicial al abrir la interfaz
 task.delay(1, function()
     refreshAllDropdowns()
 end)
@@ -1278,33 +1503,1240 @@ end)
 
 
 
+-- ============================================
+-- ITEM ESP
+-- ============================================
+
+
+-- ═══════════════════════════════════════════════════════
+-- 📦 TAB: ITEMS ESPECÍFICOS
+-- ═══════════════════════════════════════════════════════
+
+local ItemTab = Window:CreateTab("📦 Items Específicos")
+
+-- ============================================
+-- TELEPORT TO ITEM
+-- ============================================
+ItemTab:CreateSection("📍 Teleport a Items Específicos")
+
+local itemList = {
+    "Revolver", "MedKit", "Alien Chest", "Berry", "Bolt", "Broken Fan",
+    "Carrot", "Coal", "Coin Stack", "Hologram Emitter", "Item Chest",
+    "Laser Fence Blueprint", "Log", "Old Flashlight", "Old Radio",
+    "Sheet Metal", "Bandage", "Rifle"
+}
+
+local function getModelPart(model)
+    if model.PrimaryPart then
+        return model.PrimaryPart
+    end
+    for _, part in pairs(model:GetChildren()) do
+        if part:IsA("BasePart") then
+            return part
+        end
+    end
+    return nil
+end
+
+ItemTab:CreateDropdown({
+    Name = "📍 Teleport a Item",
+    Options = itemList,
+    Callback = function(itemName)
+        local candidates = {}
+        for _, model in pairs(itemFolder:GetChildren()) do
+            if model:IsA("Model") and model.Name == itemName then
+                local part = getModelPart(model)
+                if part then
+                    table.insert(candidates, part)
+                end
+            end
+        end
+
+        if #candidates == 0 then
+            notify("❌ Error", "No se encontró: " .. itemName, 3)
+            return
+        end
+
+        local targetPart = candidates[math.random(1, #candidates)]
+        local character = player.Character
+        if character then
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = targetPart.CFrame + Vector3.new(0, 5, 0)
+                notify("✅ Teleport", "Teletransportado a " .. itemName, 2)
+            end
+        end
+    end
+})
+
+-- ============================================
+-- BRING ITEM TO YOU (BULK)
+-- ============================================
+ItemTab:CreateSection("🎯 Traer Items a Ti (Bulk)")
+
+local possibleItems = {
+    "Alien Chest", "Alpha Wolf Pelt", "Anvil Front", "Anvil Back", "Apple",
+    "Bandage", "Bear Corpse", "Bear Pelt", "Berry", "Biofuel", "Bolt",
+    "Broken Fan", "Bunny Foot", "Carrot", "Coal", "Coin Stack",
+    "Cooked Morsel", "Cooked Steak", "Chainsaw", "Cultist", "Cultist Gem",
+    "Flower", "Fuel Canister", "Hologram Emitter", "Item Chest",
+    "Laser Fence Blueprint", "Leather Body", "Iron Body", "Thorn Body",
+    "Log", "MedKit", "Morsel", "Old Flashlight", "Old Radio",
+    "Good Sack", "Good Axe", "Raygun", "Giant Sack", "Strong Axe",
+    "Oil Barrel", "Old Car Engine", "Rifle", "Rifle Ammo", "Revolver",
+    "Revolver Ammo", "Sapling", "Sheet Metal", "Steak", "Wolf Pelt",
+    "Gem of the Forest Fragment", "Tyre", "Washing Machine", "Broken Microwave"
+}
+
+ItemTab:CreateDropdown({
+    Name = "🎯 Traer Item (Todos)",
+    Options = possibleItems,
+    Callback = function(itemName)
+        local character = player.Character
+        if not character then 
+            notify("❌ Error", "Personaje no encontrado", 2)
+            return 
+        end
+        
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then 
+            notify("❌ Error", "HumanoidRootPart no encontrado", 2)
+            return 
+        end
+        
+        local stackOffsetY = 2
+        local count = 0
+        
+        local sources = {
+            itemFolder,
+            ReplicatedStorage:FindFirstChild("TempStorage")
+        }
+
+        for _, source in ipairs(sources) do
+            if source then
+                for _, item in ipairs(source:GetChildren()) do
+                    if item.Name == itemName then
+                        local targetPart = nil
+
+                        -- Caso especial para Berry
+                        if itemName == "Berry" then
+                            targetPart = item:FindFirstChild("Handle")
+                            if not targetPart then
+                                for _, child in ipairs(item:GetDescendants()) do
+                                    if child:IsA("MeshPart") or child:IsA("Part") or child:IsA("UnionOperation") then
+                                        targetPart = child
+                                        break
+                                    end
+                                end
+                            end
+                        else
+                            -- Para otros items
+                            for _, child in ipairs(item:GetDescendants()) do
+                                if child:IsA("MeshPart") or child:IsA("Part") then
+                                    targetPart = child
+                                    break
+                                end
+                            end
+                        end
+
+                        if targetPart then
+                            pcall(function()
+                                remoteEvents.RequestStartDraggingItem:FireServer(item)
+                                task.wait(0.05)
+                                local offset = Vector3.new(
+                                    math.random(-2, 2), 
+                                    count * stackOffsetY, 
+                                    math.random(-2, 2)
+                                )
+                                targetPart.CFrame = rootPart.CFrame + offset
+                                task.wait(0.05)
+                                remoteEvents.StopDraggingItem:FireServer(item)
+                            end)
+                            count = count + 1
+                        end
+                    end
+                end
+            end
+        end
+        
+        if count > 0 then
+            notify("✅ Items Traídos", string.format("Se trajeron %d %s", count, itemName), 3)
+        else
+            notify("⚠️ Aviso", "No se encontró ningún " .. itemName, 2)
+        end
+    end
+})
+
+-- ============================================
+-- ITEM CATEGORIES
+-- ============================================
+ItemTab:CreateSection("📁 Traer por Categoría")
+
+local bracket = {
+    weapons = {"Laser Sword", "Rifle", "Revolver", "Raygun", "Tactical Shotgun", "Kunai", "Katana", "Spear"},
+    minifoods = {"Apple", "Berry", "Carrot"},
+    meat = {"Steak", "Cooked Steak", "Cooked Morsel", "Morsel"},
+    armor = {"Leather Body", "Iron Body", "Thorn Body"},
+    guns_ammo = {"Tactical Shotgun", "Revolver Ammo", "Rifle Ammo"},
+    materials = {"Log", "Coal", "Fuel Canister", "UFO Junk", "UFO Component", "Bandage", "MedKit", "Old Car Engine", "Broken Fan", "Old Microwave", "Old Radio", "Sheet Metal"},
+    pelts = {"Alpha Wolf Pelt", "Bear Pelt", "Wolf Pelt", "Bunny Foot"},
+    misc_tools = {"Good Sack", "Old Flashlight", "Old Radio", "Giant Sack", "Strong Flashlight", "Chainsaw"}
+}
+
+local function findTeleportablePart(item)
+    -- Primero buscar PrimaryPart
+    if item.PrimaryPart then
+        return item.PrimaryPart
+    end
+    
+    -- Buscar Handle
+    local handle = item:FindFirstChild("Handle")
+    if handle and handle:IsA("BasePart") then
+        return handle
+    end
+    
+    -- Buscar cualquier BasePart
+    for _, descendant in ipairs(item:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            return descendant
+        end
+    end
+    
+    return nil
+end
+
+local function teleportItemCategory(itemName)
+    local character = player.Character
+    if not character then 
+        notify("❌ Error", "Personaje no encontrado", 2)
+        return 
+    end
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then 
+        notify("❌ Error", "HumanoidRootPart no encontrado", 2)
+        return 
+    end
+    
+    local stackOffsetY = 2
+    local count = 0
+
+    for _, item in ipairs(itemFolder:GetChildren()) do
+        if item.Name == itemName then
+            local targetPart = findTeleportablePart(item)
+            if targetPart then
+                pcall(function()
+                    remoteEvents.RequestStartDraggingItem:FireServer(item)
+                    task.wait(0.05)
+                    local offset = Vector3.new(
+                        math.random(-3, 3), 
+                        count * stackOffsetY, 
+                        math.random(-3, 3)
+                    )
+                    targetPart.CFrame = rootPart.CFrame + offset
+                    task.wait(0.05)
+                    remoteEvents.StopDraggingItem:FireServer(item)
+                end)
+                count = count + 1
+            end
+        end
+    end
+    
+    if count > 0 then
+        notify("✅ Categoría Traída", string.format("Se trajeron %d %s", count, itemName), 3)
+    else
+        notify("⚠️ Aviso", "No se encontró ningún " .. itemName, 2)
+    end
+end
+
+-- Crear dropdown por cada categoría
+for groupName, itemList in pairs(bracket) do
+    local label = groupName:gsub("_", " "):gsub("(%a)([%w_']*)", function(first, rest)
+        return first:upper() .. rest:lower()
+    end)
+    
+    ItemTab:CreateDropdown({
+        Name = "📁 " .. label,
+        Options = itemList,
+        Callback = function(itemName)
+            teleportItemCategory(itemName)
+        end
+    })
+end
+
+ItemTab:CreateSection("ℹ️ Información")
+
+ItemTab:CreateParagraph({
+    Title = "💡 Uso de Items Específicos",
+    Content = "• Teleport: Te lleva directamente al item\n• Traer Bulk: Trae TODOS los items del mismo tipo\n• Categorías: Trae items organizados por tipo"
+})
+
+
+-- ═══════════════════════════════════════════════════════
+-- 🔄 TAB: AUTO FARM
+-- ═══════════════════════════════════════════════════════
+
+local AutoTab = Window:CreateTab("🔄 Auto Farm")
+
+AutoTab:CreateSection("Sistema de Auto Farm")
+
+AutoTab:CreateParagraph({
+    Title = "Información",
+    Content = "Sistema completo de automatización para fogata, cocina, máquina de moler y más"
+})
+
+-- Listas de items
+local campfireFuelItems = {"Log", "Coal", "Fuel Canister", "Oil Barrel", "Biofuel"}
+local autocookItems = {"Morsel", "Steak"}
+local autoGrindItems = {
+    "UFO Junk", "UFO Component", "Old Car Engine", "Broken Fan", 
+    "Old Microwave", "Bolt", "Log", "Cultist Gem", "Sheet Metal", 
+    "Old Radio", "Tyre", "Washing Machine", "Cultist Experiment", 
+    "Cultist Component", "Gem of the Forest Fragment", "Broken Microwave"
+}
+local autoEatFoods = {"Cooked Steak", "Cooked Morsel", "Berry", "Carrot", "Apple"}
+local biofuelItems = {"Carrot", "Cooked Morsel", "Morsel", "Steak", "Cooked Steak", "Log"}
+
+-- Estados de toggles
+local autoFuelEnabledItems = {}
+local autoCookEnabledItems = {}
+local autoGrindEnabledItems = {}
+local autoEatEnabled = false
+local autoEatHPEnabled = false
+local autoBiofuelEnabledItems = {}
+local alwaysFeedEnabledItems = {}
+
+-- AUTO FEED CAMPFIRE (ALWAYS)
+AutoTab:CreateSection("🔥 Auto Feed Campfire (Siempre)")
+
+AutoTab:CreateParagraph({
+    Title = "Modo Siempre Activo",
+    Content = "Alimenta la fogata constantemente sin importar su nivel de salud."
+})
+
+for _, itemName in ipairs(campfireFuelItems) do
+    AutoTab:CreateToggle({
+        Name = "Always: " .. itemName,
+        CurrentValue = false,
+        Callback = function(checked)
+            alwaysFeedEnabledItems[itemName] = checked
+        end
+    })
+end
+
+coroutine.wrap(function()
+    while true do
+        for itemName, enabled in pairs(alwaysFeedEnabledItems) do
+            if enabled then
+                for _, item in ipairs(itemFolder:GetChildren()) do
+                    if item.Name == itemName then
+                        moveItemToPos(item, campfireDropPos)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(2)
+    end
+end)()
+
+-- AUTO FEED CAMPFIRE (HP BASED)
+AutoTab:CreateSection("🔥 Auto Feed Campfire (HP Based)")
+
+AutoTab:CreateParagraph({
+    Title = "Modo Basado en HP",
+    Content = "Solo alimenta cuando la fogata baja del 70% de salud."
+})
+
+for _, itemName in ipairs(campfireFuelItems) do
+    AutoTab:CreateToggle({
+        Name = "HP Feed: " .. itemName,
+        CurrentValue = false,
+        Callback = function(checked)
+            autoFuelEnabledItems[itemName] = checked
+        end
+    })
+end
+
+coroutine.wrap(function()
+    task.wait(2)
+    local success, campfire = pcall(function()
+        return workspace:WaitForChild("Map"):WaitForChild("Campground"):WaitForChild("MainFire")
+    end)
+    
+    if not success or not campfire then return end
+    
+    local fillFrame = campfire.Center.BillboardGui.Frame.Background.Fill
+    
+    while true do
+        local success2, healthPercent = pcall(function()
+            return fillFrame.Size.X.Scale
+        end)
+        
+        if success2 and healthPercent < 0.7 then
+            repeat
+                for itemName, enabled in pairs(autoFuelEnabledItems) do
+                    if enabled then
+                        for _, item in ipairs(itemFolder:GetChildren()) do
+                            if item.Name == itemName then
+                                moveItemToPos(item, campfireDropPos)
+                                task.wait(0.1)
+                            end
+                        end
+                    end
+                end
+                task.wait(0.5)
+                success2, healthPercent = pcall(function()
+                    return fillFrame.Size.X.Scale
+                end)
+            until (success2 and healthPercent >= 1) or not success2
+        end
+        task.wait(2)
+    end
+end)()
+
+-- AUTO COOK
+AutoTab:CreateSection("🍖 Auto Cook Food")
+
+AutoTab:CreateParagraph({
+    Title = "Auto Cocinar",
+    Content = "Cocina automáticamente carne en la fogata."
+})
+
+for _, itemName in ipairs(autocookItems) do
+    AutoTab:CreateToggle({
+        Name = "Cook: " .. itemName,
+        CurrentValue = false,
+        Callback = function(checked)
+            autoCookEnabledItems[itemName] = checked
+        end
+    })
+end
+
+coroutine.wrap(function()
+    while true do
+        for itemName, enabled in pairs(autoCookEnabledItems) do
+            if enabled then
+                for _, item in ipairs(itemFolder:GetChildren()) do
+                    if item.Name == itemName then
+                        moveItemToPos(item, campfireDropPos)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(2.5)
+    end
+end)()
+
+-- AUTO GRIND MACHINE
+AutoTab:CreateSection("⚙️ Auto Machine Grind")
+
+AutoTab:CreateParagraph({
+    Title = "Auto Moler",
+    Content = "Muele items automáticamente en la máquina."
+})
+
+for _, itemName in ipairs(autoGrindItems) do
+    AutoTab:CreateToggle({
+        Name = "Grind: " .. itemName,
+        CurrentValue = false,
+        Callback = function(checked)
+            autoGrindEnabledItems[itemName] = checked
+        end
+    })
+end
+
+coroutine.wrap(function()
+    while true do
+        for itemName, enabled in pairs(autoGrindEnabledItems) do
+            if enabled then
+                for _, item in ipairs(itemFolder:GetChildren()) do
+                    if item.Name == itemName then
+                        moveItemToPos(item, machineDropPos)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(2.5)
+    end
+end)()
+
+-- AUTO BIOFUEL PROCESSOR
+AutoTab:CreateSection("⚗️ Auto BioCombustible")
+
+AutoTab:CreateParagraph({
+    Title = "Procesador de BioCombustible",
+    Content = "Procesa items automáticamente en el procesador de BioCombustible."
+})
+
+for _, itemName in ipairs(biofuelItems) do
+    AutoTab:CreateToggle({
+        Name = "BioCombustible: " .. itemName,
+        CurrentValue = false,
+        Callback = function(checked)
+            autoBiofuelEnabledItems[itemName] = checked
+        end
+    })
+end
+
+coroutine.wrap(function()
+    local biofuelProcessorPos = nil
+    
+    while true do
+        if not biofuelProcessorPos then
+            local structures = workspace:FindFirstChild("Structures")
+            if structures then
+                local processor = structures:FindFirstChild("Biofuel Processor")
+                if processor then
+                    local part = processor:FindFirstChild("Part")
+                    if part then
+                        biofuelProcessorPos = part.Position + Vector3.new(0, 5, 0)
+                    end
+                end
+            end
+        end
+
+        if biofuelProcessorPos then
+            for itemName, enabled in pairs(autoBiofuelEnabledItems) do
+                if enabled then
+                    for _, item in ipairs(itemFolder:GetChildren()) do
+                        if item.Name == itemName then
+                            moveItemToPos(item, biofuelProcessorPos)
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(2)
+    end
+end)()
+
+-- AUTO EAT (INTERVAL)
+AutoTab:CreateSection("🍽️ Comer Automático")
+
+AutoTab:CreateParagraph({
+    Title = "Comer Automático",
+    Content = "Come automáticamente cada 3 segundos o basado en la barra de hambre."
+})
+
+local remoteConsume = remoteEvents:WaitForChild("RequestConsumeItem")
+
+AutoTab:CreateToggle({
+    Name = "Comer Automático (cada 3s)",
+    CurrentValue = false,
+    Callback = function(checked)
+        autoEatEnabled = checked
+    end
+})
+
+coroutine.wrap(function()
+    while true do
+        if autoEatEnabled then
+            local available = {}
+            for _, item in ipairs(itemFolder:GetChildren()) do
+                if table.find(autoEatFoods, item.Name) then
+                    table.insert(available, item)
+                end
+            end
+            if #available > 0 then
+                local food = available[math.random(1, #available)]
+                pcall(function() 
+                    remoteConsume:InvokeServer(food) 
+                end)
+            end
+        end
+        task.wait(3)
+    end
+end)()
+
+-- AUTO EAT (HP BAR BASED)
+AutoTab:CreateToggle({
+    Name = "Auto Eat (siempre al 100)",
+    CurrentValue = false,
+    Callback = function(checked)
+        autoEatHPEnabled = checked
+    end
+})
+
+coroutine.wrap(function()
+    task.wait(2)
+    local success, hungerBar = pcall(function()
+        return player:WaitForChild("PlayerGui"):WaitForChild("Interface"):WaitForChild("StatBars"):WaitForChild("HungerBar"):WaitForChild("Bar")
+    end)
+    
+    if not success or not hungerBar then return end
+    
+    while true do
+        if autoEatHPEnabled then
+            local success2, scale = pcall(function()
+                return hungerBar.Size.X.Scale
+            end)
+            
+            if success2 and scale <= 0.5 then
+                repeat
+                    local available = {}
+                    for _, item in ipairs(itemFolder:GetChildren()) do
+                        if item.Name and table.find(autoEatFoods, item.Name) then
+                            table.insert(available, item)
+                        end
+                    end
+
+                    if #available > 0 then
+                        local food = available[math.random(1, #available)]
+                        pcall(function()
+                            remoteConsume:InvokeServer(food)
+                        end)
+                        task.wait(1)
+                    else
+                        break
+                    end
+
+                    success2, scale = pcall(function()
+                        return hungerBar.Size.X.Scale
+                    end)
+                until (success2 and scale >= 0.99) or not autoEatHPEnabled
+            end
+        end
+        task.wait(3)
+    end
+end)()
+
+-- TREE TELEPORT SYSTEM
+AutoTab:CreateSection("🌲 Sistema de Árboles")
+
+local originalTreeCFrames = {}
+local treesBrought = false
+
+local function getAllSmallTrees()
+    local trees = {}
+    local function scan(folder)
+        for _, obj in ipairs(folder:GetChildren()) do
+            if obj:IsA("Model") and obj.Name == "Small Tree" then
+                table.insert(trees, obj)
+            end
+        end
+    end
+
+    local map = workspace:FindFirstChild("Map")
+    if map then
+        if map:FindFirstChild("Foliage") then scan(map.Foliage) end
+        if map:FindFirstChild("Landmarks") then scan(map.Landmarks) end
+    end
+    return trees
+end
+
+local function findTrunk(tree)
+    for _, part in ipairs(tree:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name == "Trunk" then 
+            return part 
+        end
+    end
+    return nil
+end
+
+local function bringAllTrees()
+    local char = player.Character
+    if not char then return end
+    local rootPart = char:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
+    local target = CFrame.new(rootPart.Position + rootPart.CFrame.LookVector * 10)
+    local count = 0
+    
+    for _, tree in ipairs(getAllSmallTrees()) do
+        local trunk = findTrunk(tree)
+        if trunk then
+            if not originalTreeCFrames[tree] then 
+                originalTreeCFrames[tree] = trunk.CFrame 
+            end
+            
+            pcall(function()
+                tree.PrimaryPart = trunk
+                trunk.Anchored = false
+                trunk.CanCollide = false
+                task.wait(0.01)
+                tree:SetPrimaryPartCFrame(target + Vector3.new(math.random(-5,5), 0, math.random(-5,5)))
+                trunk.Anchored = true
+            end)
+            count = count + 1
+        end
+    end
+    
+    treesBrought = true
+    notify("Árboles", string.format("Se trajeron %d árboles", count), 3)
+end
+
+local function restoreTrees()
+    local count = 0
+    for tree, cframe in pairs(originalTreeCFrames) do
+        local trunk = findTrunk(tree)
+        if trunk then
+            pcall(function()
+                tree.PrimaryPart = trunk
+                tree:SetPrimaryPartCFrame(cframe)
+                trunk.Anchored = true
+                trunk.CanCollide = true
+            end)
+            count = count + 1
+        end
+    end
+    originalTreeCFrames = {}
+    treesBrought = false
+    
+    notify("Árboles", string.format("Se restauraron %d árboles", count), 3)
+end
+
+AutoTab:CreateToggle({
+    Name = "Traer Todos los Árboles Pequeños",
+    CurrentValue = false,
+    Callback = function(checked)
+        if checked and not treesBrought then
+            bringAllTrees()
+        elseif not checked and treesBrought then
+            restoreTrees()
+        end
+    end
+})
+
+
+
+-- ═══════════════════════════════════════════════════════
+-- 👥 TAB: JUGADORES
+-- ═══════════════════════════════════════════════════════
+
+local PlayersTab = Window:CreateTab("👥 Jugadores")
+
+PlayersTab:CreateSection("🎯 Gestión de Jugadores")
+
+-- Variables para el sistema de jugadores
+local selectedTargetPlayer = nil
+local selectedItemForPlayer = nil
+local spectatingPlayer = nil
+local spectateConnection = nil
+local originalCamera = nil
+local giveKillAuraEnabled = false
+local giveKillAuraRadius = 200
+
+-- Función para obtener lista de jugadores (excluyendo al local player)
+local function getPlayerList()
+    local playerList = {}
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player then
+            table.insert(playerList, plr.Name)
+        end
+    end
+    table.sort(playerList)
+    return #playerList > 0 and playerList or {"No hay jugadores"}
+end
+
+-- Función para obtener lista de items (sin cofres)
+local function getItemListNoChests()
+    local itemsFolder = workspace:FindFirstChild("Items")
+    if not itemsFolder then
+        return {"No hay items"}
+    end
+
+    local itemNames = {}
+    local uniqueItems = {}
+
+    for _, item in ipairs(itemsFolder:GetChildren()) do
+        local nameLower = item.Name:lower()
+        -- Excluir cofres
+        if not (nameLower:find("chest") or nameLower:find("cofre")) then
+            if not uniqueItems[item.Name] then
+                uniqueItems[item.Name] = true
+                table.insert(itemNames, item.Name)
+            end
+        end
+    end
+
+    table.sort(itemNames)
+    return #itemNames > 0 and itemNames or {"No hay items"}
+end
+
+-- Función para mover item hacia un jugador usando Remote Events
+local function moveItemToPlayer(item, targetPlayer)
+    if not item or not item:IsDescendantOf(workspace) then return false end
+    if not targetPlayer or not targetPlayer.Character then return false end
+    
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return false end
+    
+    local part = item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart") or item:FindFirstChild("Handle")
+    if not part then return false end
+
+    if not item.PrimaryPart then
+        pcall(function() item.PrimaryPart = part end)
+    end
+
+    local success = pcall(function()
+        remoteEvents.RequestStartDraggingItem:FireServer(item)
+        task.wait(0.05)
+        item:SetPrimaryPartCFrame(CFrame.new(targetRoot.Position + Vector3.new(math.random(-3, 3), 5, math.random(-3, 3))))
+        task.wait(0.05)
+        remoteEvents.StopDraggingItem:FireServer(item)
+    end)
+    
+    return success
+end
+
+-- Función para detener espectador
+local function stopSpectating()
+    if spectateConnection then
+        spectateConnection:Disconnect()
+        spectateConnection = nil
+    end
+    
+    local camera = workspace.CurrentCamera
+    if camera and originalCamera then
+        camera.CameraSubject = player.Character and player.Character:FindFirstChild("Humanoid") or player
+        camera.CameraType = Enum.CameraType.Custom
+    end
+    
+    spectatingPlayer = nil
+end
+
+-- Sistema de Kill Aura para darle a otros jugadores
+local toolsDamageIDs = {
+    ["Old Axe"] = "1_8982038982",
+    ["Good Axe"] = "112_8982038982",
+    ["Strong Axe"] = "116_8982038982",
+    ["Chainsaw"] = "647_8992824875",
+    ["Spear"] = "196_8999010016"
+}
+
+local function getAnyToolWithDamageID()
+    local plr = player
+    if not plr:FindFirstChild("Inventory") then return nil, nil end
+    
+    for toolName, damageID in pairs(toolsDamageIDs) do
+        local tool = plr.Inventory:FindFirstChild(toolName)
+        if tool then
+            return tool, damageID
+        end
+    end
+    return nil, nil
+end
+
+local function giveKillAuraLoop()
+    while giveKillAuraEnabled do
+        if not selectedTargetPlayer or not selectedTargetPlayer.Character then
+            task.wait(0.5)
+            continue
+        end
+        
+        local targetChar = selectedTargetPlayer.Character
+        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+        
+        if not targetRoot then 
+            task.wait(0.5)
+            continue
+        end
+
+        local tool, damageID = getAnyToolWithDamageID()
+        if tool and damageID then
+            -- Buscar la carpeta Characters en workspace
+            local charactersFolder = workspace:FindFirstChild("Characters")
+            if charactersFolder then
+                -- Atacar a todos los NPCs cerca del jugador seleccionado (NO cerca de ti)
+                for _, mob in ipairs(charactersFolder:GetChildren()) do
+                    if mob:IsA("Model") then
+                        local mobPart = mob:FindFirstChildWhichIsA("BasePart")
+                        if mobPart then
+                            -- IMPORTANTE: Calcular distancia desde el jugador seleccionado, NO desde ti
+                            local distanceFromTarget = (mobPart.Position - targetRoot.Position).Magnitude
+                            
+                            if distanceFromTarget <= giveKillAuraRadius then
+                                pcall(function()
+                                    remoteEvents.ToolDamageObject:InvokeServer(
+                                        mob,
+                                        tool,
+                                        damageID,
+                                        CFrame.new(mobPart.Position)
+                                    )
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+            task.wait(0.1)
+        else
+            task.wait(1)
+        end
+    end
+end
+
+PlayersTab:CreateParagraph({
+    Title = "ℹ️ Información",
+    Content = "Envía items a otros jugadores sin importar si estás muerto."
+})
+
+-- Dropdown de selección de jugador
+local PlayerDropdown = PlayersTab:CreateDropdown({
+    Name = "👤 Seleccionar Jugador",
+    Options = getPlayerList(),
+    Callback = function(selectedPlayer)
+        if selectedPlayer == "No hay jugadores" then 
+            selectedTargetPlayer = nil
+            return 
+        end
+        
+        local targetPlayer = Players:FindFirstChild(selectedPlayer)
+        if targetPlayer then
+            selectedTargetPlayer = targetPlayer
+            notify("👤 Jugador Seleccionado", selectedPlayer, 2)
+        else
+            selectedTargetPlayer = nil
+            notify("❌ Error", "Jugador no encontrado", 2)
+        end
+    end
+})
+
+-- Dropdown de selección de item (sin cofres)
+local ItemForPlayerDropdown = PlayersTab:CreateDropdown({
+    Name = "📦 Seleccionar Item",
+    Options = getItemListNoChests(),
+    Callback = function(selectedItem)
+        if selectedItem == "No hay items" then 
+            selectedItemForPlayer = nil
+            return 
+        end
+        selectedItemForPlayer = selectedItem
+        notify("📦 Item Seleccionado", selectedItem, 2)
+    end
+})
+
+PlayersTab:CreateSection("📤 Enviar Items")
+
+-- Botón para enviar UN item
+PlayersTab:CreateButton({
+    Name = "📤 Enviar 1 Item al Jugador",
+    Callback = function()
+        if not selectedTargetPlayer then
+            notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
+            return
+        end
+        
+        if not selectedItemForPlayer then
+            notify("⚠️ Aviso", "Selecciona un item primero", 2)
+            return
+        end
+        
+        if not selectedTargetPlayer.Character or not selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "El jugador no tiene personaje válido", 2)
+            return
+        end
+        
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if not itemsFolder then
+            notify("❌ Error", "Carpeta 'Items' no encontrada", 2)
+            return
+        end
+        
+        -- Buscar el primer item del tipo seleccionado
+        for _, item in ipairs(itemsFolder:GetChildren()) do
+            if item.Name == selectedItemForPlayer then
+                local success = moveItemToPlayer(item, selectedTargetPlayer)
+                if success then
+                    notify("✅ Item Enviado", 
+                        string.format("'%s' → %s", selectedItemForPlayer, selectedTargetPlayer.Name), 3)
+                else
+                    notify("❌ Error", "No se pudo enviar el item", 2)
+                end
+                return
+            end
+        end
+        
+        notify("❌ Error", "No se encontró: " .. selectedItemForPlayer, 2)
+    end
+})
+
+-- Botón para enviar TODOS los items del mismo tipo
+PlayersTab:CreateButton({
+    Name = "📦 Enviar TODOS del Mismo Tipo",
+    Callback = function()
+        if not selectedTargetPlayer then
+            notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
+            return
+        end
+        
+        if not selectedItemForPlayer then
+            notify("⚠️ Aviso", "Selecciona un item primero", 2)
+            return
+        end
+        
+        if not selectedTargetPlayer.Character or not selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "El jugador no tiene personaje válido", 2)
+            return
+        end
+        
+        local itemsFolder = workspace:FindFirstChild("Items")
+        if not itemsFolder then
+            notify("❌ Error", "Carpeta 'Items' no encontrada", 2)
+            return
+        end
+        
+        local itemsSent = 0
+        local targetName = selectedItemForPlayer:lower()
+        
+        for _, item in ipairs(itemsFolder:GetChildren()) do
+            if item.Name:lower() == targetName then
+                local success = moveItemToPlayer(item, selectedTargetPlayer)
+                if success then
+                    itemsSent = itemsSent + 1
+                    task.wait(0.1) -- Pequeña pausa entre envíos
+                end
+            end
+        end
+        
+        if itemsSent > 0 then
+            notify("✅ Items Enviados", 
+                string.format("%d '%s' → %s", itemsSent, selectedItemForPlayer, selectedTargetPlayer.Name), 3)
+        else
+            notify("❌ Error", "No se encontró ningún " .. selectedItemForPlayer, 2)
+        end
+    end
+})
+
+PlayersTab:CreateSection("⚔️ Kill Aura para Jugador")
+
+PlayersTab:CreateParagraph({
+    Title = "💡 Cómo Funciona",
+    Content = "El jugador seleccionado recibirá Kill Aura automático. Los NPCs CERCA DE ÉL serán atacados usando TUS herramientas."
+})
+
+PlayersTab:CreateToggle({
+    Name = "⚔️ Dar Kill Aura al Jugador",
+    CurrentValue = false,
+    Callback = function(state)
+        giveKillAuraEnabled = state
+        if state then
+            if not selectedTargetPlayer then
+                notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
+                giveKillAuraEnabled = false
+                return
+            end
+            
+            task.spawn(giveKillAuraLoop)
+            notify("⚔️ Kill Aura Activado", 
+                string.format("NPCs cerca de %s serán atacados - Radio: %d", selectedTargetPlayer.Name, giveKillAuraRadius), 3)
+        else
+            notify("⚔️ Kill Aura Desactivado", 
+                selectedTargetPlayer and ("Kill Aura removido de " .. selectedTargetPlayer.Name) or "Kill Aura desactivado", 2)
+        end
+    end
+})
+
+PlayersTab:CreateSlider({
+    Name = "⚔️ Radio de Kill Aura",
+    Range = {20, 500},
+    Increment = 5,
+    CurrentValue = 200,
+    Suffix = " studs",
+    Callback = function(value)
+        giveKillAuraRadius = value
+        if giveKillAuraEnabled and selectedTargetPlayer then
+            notify("⚔️ Radio Actualizado", 
+                string.format("Nuevo radio para %s: %d studs", selectedTargetPlayer.Name, value), 2)
+        end
+    end
+})
+
+PlayersTab:CreateParagraph({
+    Title = "⚠️ Nota Importante",
+    Content = "• Necesitas tener una herramienta de daño en TU inventario\n• Los mobs CERCA DEL JUGADOR SELECCIONADO serán atacados\n• NO ataca mobs cerca de ti, solo cerca de él\n• Funciona aunque estés muerto"
+})
+
+PlayersTab:CreateSection("👁️ Espectador")
+
+-- Toggle para espectar jugador
+PlayersTab:CreateToggle({
+    Name = "👁️ Espectar Jugador Seleccionado",
+    CurrentValue = false,
+    Callback = function(state)
+        if state then
+            if not selectedTargetPlayer then
+                notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
+                return
+            end
+            
+            if not selectedTargetPlayer.Character or not selectedTargetPlayer.Character:FindFirstChild("Humanoid") then
+                notify("❌ Error", "El jugador no tiene personaje válido", 2)
+                return
+            end
+            
+            -- Guardar cámara original
+            local camera = workspace.CurrentCamera
+            if not originalCamera then
+                originalCamera = camera.CameraSubject
+            end
+            
+            spectatingPlayer = selectedTargetPlayer
+            camera.CameraSubject = selectedTargetPlayer.Character.Humanoid
+            
+            -- Conexión para mantener el espectador actualizado
+            spectateConnection = RunService.RenderStepped:Connect(function()
+                if spectatingPlayer and spectatingPlayer.Character and spectatingPlayer.Character:FindFirstChild("Humanoid") then
+                    camera.CameraSubject = spectatingPlayer.Character.Humanoid
+                else
+                    stopSpectating()
+                    notify("⚠️ Aviso", "El jugador ya no está disponible", 2)
+                end
+            end)
+            
+            notify("👁️ Espectador Activado", "Espectando a: " .. selectedTargetPlayer.Name, 3)
+        else
+            stopSpectating()
+            notify("👁️ Espectador Desactivado", "Cámara restaurada", 2)
+        end
+    end
+})
+
+PlayersTab:CreateSection("🔄 Actualización")
+
+PlayersTab:CreateParagraph({
+    Title = "💡 Consejos",
+    Content = "• Funciona incluso si estás muerto\n• El espectador se actualiza automáticamente\n• El dropdown de items se actualiza solo\n• Kill Aura ataca mobs CERCA DEL JUGADOR, no cerca de ti\n• Los items se envían cerca del jugador seleccionado"
+})
+
+-- ═══════════════════════════════════════════════════════
+-- 🔄 SISTEMA DE AUTO-ACTUALIZACIÓN DE ITEMS
+-- ═══════════════════════════════════════════════════════
+
+-- Sistema inteligente de actualización del dropdown de items
+local itemUpdatePending = false
+
+local function scheduleItemDropdownUpdate()
+    if not itemUpdatePending then
+        itemUpdatePending = true
+        task.delay(1.5, function()
+            local newItemList = getItemListNoChests()
+            if ItemForPlayerDropdown and typeof(ItemForPlayerDropdown.UpdateOnClose) == "function" then
+                pcall(function()
+                    ItemForPlayerDropdown:UpdateOnClose(newItemList)
+                end)
+            end
+            itemUpdatePending = false
+        end)
+    end
+end
+
+-- Detectar cuando se añaden items al workspace
+if itemFolder then
+    itemFolder.ChildAdded:Connect(function(item)
+        scheduleItemDropdownUpdate()
+    end)
+    
+    itemFolder.ChildRemoved:Connect(function(item)
+        scheduleItemDropdownUpdate()
+    end)
+end
+
+-- Actualización inicial después de 1 segundo
+task.delay(1, function()
+    local newItemList = getItemListNoChests()
+    if ItemForPlayerDropdown and typeof(ItemForPlayerDropdown.UpdateOnClose) == "function" then
+        pcall(function()
+            ItemForPlayerDropdown:UpdateOnClose(newItemList)
+        end)
+    end
+end)
+
+-- Limpiar al cerrar/resetear
+player.CharacterRemoving:Connect(function()
+    if spectatingPlayer then
+        stopSpectating()
+    end
+end)
+-- ═══════════════════════════════════════════════════════
 -- 👁️ TAB: ESP
+-- ═══════════════════════════════════════════════════════
+
 local ESPTab = Window:CreateTab("👁️ ESP")
 
 ESPTab:CreateSection("👀 Sistema de ESP")
+
+-- Item ESP con fuente personalizada
+local customFont = Font.new("rbxassetid://16658246179", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+
+local itemNames = {
+    ["Revolver"] = true, ["Oil Barrel"] = true, ["Chainsaw"] = true, 
+    ["Giant Sack"] = true, ["Bunny Foot"] = true, ["MedKit"] = true, 
+    ["Alien Chest"] = true, ["Berry"] = true, ["Bolt"] = true, 
+    ["Broken Fan"] = true, ["Carrot"] = true, ["Coal"] = true,
+    ["Coin Stack"] = true, ["Hologram Emitter"] = true, 
+    ["Item Chest"] = true, ["Laser Fence Blueprint"] = true, 
+    ["Log"] = true, ["Old Flashlight"] = true, ["Old Radio"] = true, 
+    ["Sheet Metal"] = true, ["Bandage"] = true, ["Rifle"] = true
+}
+
+local espConnections = {}
+
+local function createItemESP(model)
+    if not model:IsA("Model") or not itemNames[model.Name] then return end
+    if not model.PrimaryPart or model:FindFirstChild("ESP") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP"
+    billboard.Size = UDim2.new(0, 100, 0, 30)
+    billboard.Adornee = model.PrimaryPart
+    billboard.AlwaysOnTop = true
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.TextSize = 17
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextStrokeTransparency = 0.5
+    label.TextScaled = false
+    label.FontFace = customFont
+    label.Text = model.Name
+    label.Parent = billboard
+
+    billboard.Parent = model
+end
+
+local function removeAllItemESP()
+    for _, model in ipairs(itemFolder:GetChildren()) do
+        local esp = model:FindFirstChild("ESP")
+        if esp then esp:Destroy() end
+    end
+end
 
 ESPTab:CreateToggle({
     Name = "📦 ESP de Items",
     CurrentValue = false,
     Callback = function(state)
         if state then
-            local folder = workspace:FindFirstChild("Items")
-            if folder then
-                for _, obj in pairs(folder:GetChildren()) do
-                    createESP(obj, Color3.fromRGB(255, 255, 0), obj.Name)
-                end
-                notify("✅ ESP Items", "Activado", 2)
-            else
-                notify("❌ Error", "Carpeta 'Items' no encontrada", 2)
+            for _, model in ipairs(itemFolder:GetChildren()) do
+                createItemESP(model)
             end
+
+            local connection = itemFolder.ChildAdded:Connect(function(model)
+                task.wait(0.1)
+                if model:IsA("Model") and itemNames[model.Name] then
+                    if not model.PrimaryPart then
+                        model:GetPropertyChangedSignal("PrimaryPart"):Wait()
+                    end
+                    createItemESP(model)
+                end
+            end)
+            table.insert(espConnections, connection)
+            
+            notify("Item ESP", "Item ESP activado", 2)
         else
-            local folder = workspace:FindFirstChild("Items")
-            if folder then
-                for _, obj in pairs(folder:GetChildren()) do
-                    removeESP(obj)
-                end
+            removeAllItemESP()
+            for _, conn in ipairs(espConnections) do
+                if conn.Connected then conn:Disconnect() end
             end
-            notify("❌ ESP Items", "Desactivado", 2)
+            espConnections = {}
+            
+            notify("Item ESP", "Item ESP desactivado", 2)
         end
     end
 })
@@ -1335,27 +2767,144 @@ ESPTab:CreateToggle({
     end
 })
 
+-- Player ESP y Chams
+local BillboardESPs = {}
+local ChamsESPs = {}
+local ESPConnections = {}
+local ESPEnabled = false
+local ChamsEnabled = false
+
+local function createBillboardESP(plr)
+    if BillboardESPs[plr] or plr == player then return end
+    if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "Billboard_ESP"
+    gui.Adornee = plr.Character.Head
+    gui.Parent = plr.Character.Head
+    gui.Size = UDim2.new(0, 100, 0, 40)
+    gui.AlwaysOnTop = true
+    gui.StudsOffset = Vector3.new(0, 2, 0)
+
+    local label = Instance.new("TextLabel", gui)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextStrokeTransparency = 0.5
+    label.TextScaled = true
+    label.FontFace = customFont
+
+    local conn = RunService.RenderStepped:Connect(function()
+        if not plr.Character or not plr.Character:FindFirstChild("Humanoid") then
+            gui:Destroy()
+            conn:Disconnect()
+            BillboardESPs[plr] = nil
+            ESPConnections[plr] = nil
+            return
+        end
+
+        local hp = math.floor(plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth * 100)
+        label.Text = plr.Name .. " | " .. hp .. "%"
+    end)
+
+    BillboardESPs[plr] = gui
+    ESPConnections[plr] = conn
+end
+
+local function createChamsESP(plr)
+    if ChamsESPs[plr] or plr == player then return end
+    if not plr.Character then return end
+
+    local folder = Instance.new("Folder")
+    folder.Name = "Chams_ESP"
+    folder.Parent = CoreGui
+    ChamsESPs[plr] = folder
+
+    for _, part in pairs(plr.Character:GetChildren()) do
+        if part:IsA("BasePart") then
+            local box = Instance.new("BoxHandleAdornment")
+            box.Name = "Cham_" .. plr.Name
+            box.Adornee = part
+            box.AlwaysOnTop = true
+            box.ZIndex = 10
+            box.Size = part.Size
+            box.Transparency = 0.4
+            box.Color = BrickColor.new("Bright green")
+            box.Parent = folder
+        end
+    end
+end
+
+local function cleanupBillboardESP()
+    for _, gui in pairs(BillboardESPs) do
+        if gui then pcall(function() gui:Destroy() end) end
+    end
+    for _, conn in pairs(ESPConnections) do
+        if conn and conn.Connected then pcall(function() conn:Disconnect() end) end
+    end
+    BillboardESPs = {}
+    ESPConnections = {}
+end
+
+local function cleanupChamsESP()
+    for _, folder in pairs(ChamsESPs) do
+        if folder then pcall(function() folder:Destroy() end) end
+    end
+    ChamsESPs = {}
+end
+
 ESPTab:CreateToggle({
-    Name = "🎮 ESP de Jugadores",
+    Name = "🎮 ESP (Nombres + HP)",
     CurrentValue = false,
     Callback = function(state)
-        if state then
-            for _, plr in pairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                    createESP(plr.Character, Color3.fromRGB(100, 255, 100), plr.Name)
-                end
-            end
-            notify("✅ ESP Jugadores", "Activado", 2)
+        ESPEnabled = state
+        if not state then
+            cleanupBillboardESP()
         else
             for _, plr in pairs(Players:GetPlayers()) do
-                if plr ~= player and plr.Character then
-                    removeESP(plr.Character)
+                if plr ~= player then
+                    createBillboardESP(plr)
                 end
             end
-            notify("❌ ESP Jugadores", "Desactivado", 2)
         end
     end
 })
+
+ESPTab:CreateToggle({
+    Name = "📦 Chams (Boxes)",
+    CurrentValue = false,
+    Callback = function(state)
+        ChamsEnabled = state
+        if not state then
+            cleanupChamsESP()
+        else
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= player then
+                    createChamsESP(plr)
+                end
+            end
+        end
+    end
+})
+
+local function handlePlayerESP(plr)
+    if plr == player then return end
+    
+    if ESPEnabled then createBillboardESP(plr) end
+    if ChamsEnabled then createChamsESP(plr) end
+
+    plr.CharacterAdded:Connect(function()
+        task.wait(1)
+        if ESPEnabled then createBillboardESP(plr) end
+        if ChamsEnabled then createChamsESP(plr) end
+    end)
+end
+
+for _, plr in pairs(Players:GetPlayers()) do
+    handlePlayerESP(plr)
+end
+
+Players.PlayerAdded:Connect(handlePlayerESP)
 
 ESPTab:CreateSection("🧹 Gestión de ESP")
 
@@ -1372,12 +2921,15 @@ ESPTab:CreateButton({
     end
 })
 
+-- ═══════════════════════════════════════════════════════
 -- 🎨 TAB: VISUAL
-local VisualTab = Window:CreateTab("🎨 Visual")
+-- ═══════════════════════════════════════════════════════
 
-VisualTab:CreateSection("💡 Efectos Visuales")
+local VisualsTab = Window:CreateTab("🎨 Visual")
 
-VisualTab:CreateToggle({
+VisualsTab:CreateSection("💡 Efectos Visuales")
+
+VisualsTab:CreateToggle({
     Name = "💡 Fullbright (Luz Máxima)",
     CurrentValue = false,
     Callback = function(state)
@@ -1385,7 +2937,7 @@ VisualTab:CreateToggle({
     end
 })
 
-VisualTab:CreateToggle({
+VisualsTab:CreateToggle({
     Name = "🧱 Wallhack (Ver a través de paredes)",
     CurrentValue = false,
     Callback = function(state)
@@ -1393,9 +2945,9 @@ VisualTab:CreateToggle({
     end
 })
 
-VisualTab:CreateSection("🌫️ Control de Niebla")
+VisualsTab:CreateSection("🌫️ Control de Niebla")
 
-VisualTab:CreateButton({
+VisualsTab:CreateButton({
     Name = "🚫 Remover Niebla",
     Callback = function()
         Lighting.FogEnd = 100000
@@ -1404,7 +2956,7 @@ VisualTab:CreateButton({
     end
 })
 
-VisualTab:CreateButton({
+VisualsTab:CreateButton({
     Name = "🔄 Restaurar Niebla",
     Callback = function()
         Lighting.FogEnd = 500
@@ -1413,9 +2965,9 @@ VisualTab:CreateButton({
     end
 })
 
-VisualTab:CreateSection("🎨 Personalización")
+VisualsTab:CreateSection("🎨 Personalización")
 
-VisualTab:CreateColorPicker({
+VisualsTab:CreateColorPicker({
     Name = "🌈 Color de Ambiente",
     Color = Lighting.Ambient,
     Callback = function(color)
@@ -1424,15 +2976,7 @@ VisualTab:CreateColorPicker({
     end
 })
 
-VisualTab:CreateButton({
-    Name = "🌅 Cambiar Hora del Día",
-    Callback = function()
-        Lighting.ClockTime = 12
-        notify("✅ Mediodía", "Hora cambiada a 12:00", 2)
-    end
-})
-
-VisualTab:CreateSlider({
+VisualsTab:CreateSlider({
     Name = "🕐 Hora del Día",
     Range = {0, 24},
     Increment = 1,
@@ -1443,8 +2987,49 @@ VisualTab:CreateSlider({
     end
 })
 
--- 🌐 TAB: TELETRANSPORTE
-local TeleportTab = Window:CreateTab("🌐 Teleport")
+-- FOV CIRCLE
+VisualsTab:CreateSection("🎯 FOV Circle")
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Transparency = 1
+FOVCircle.Thickness = 1
+FOVCircle.Filled = false
+FOVCircle.ZIndex = 2
+local FOVRadius = 100
+
+RunService.RenderStepped:Connect(function()
+    if FOVCircle.Visible then
+        FOVCircle.Radius = FOVRadius
+        FOVCircle.Position = UserInputService:GetMouseLocation()
+    end
+end)
+
+VisualsTab:CreateToggle({
+    Name = "Mostrar FOV Circle",
+    CurrentValue = false,
+    Callback = function(state)
+        FOVCircle.Visible = state
+    end
+})
+
+VisualsTab:CreateSlider({
+    Name = "Radio del FOV",
+    Range = {50, 360},
+    Increment = 5,
+    CurrentValue = 100,
+    Suffix = "px",
+    Callback = function(value)
+        FOVRadius = value
+    end
+})
+
+-- ═══════════════════════════════════════════════════════
+-- 🌍 TAB: TELETRANSPORTE
+-- ═══════════════════════════════════════════════════════
+
+local TeleportTab = Window:CreateTab("🌍 Teleport")
 
 TeleportTab:CreateSection("📍 Teletransporte")
 
@@ -1460,7 +3045,6 @@ TeleportTab:CreateInput({
         local inputLower = playerName:lower()
         local targetPlayer = nil
 
-        -- Buscar coincidencia parcial en Name o DisplayName
         for _, plr in pairs(Players:GetPlayers()) do
             if plr ~= player then
                 local nameLower = plr.Name:lower()
@@ -1483,23 +3067,25 @@ TeleportTab:CreateInput({
     end
 })
 
+TeleportTab:CreateSection("🗺️ Ubicaciones del Juego")
 
-TeleportTab:CreateSection("🗺️ Ubicaciones Importantes")
+local storyCoords = {
+    { name = "Campsite", coord = "0, 8, 0"},
+    { name = "Safe Zone", coord = "0, 110, 0" }
+}
 
-TeleportTab:CreateButton({
-    Name = "🏠 Spawn Principal",
-    Callback = function()
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local spawnPoint = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("SpawnLocation")
-            if spawnPoint then
-                character.HumanoidRootPart.CFrame = spawnPoint.CFrame + Vector3.new(0, 5, 0)
-            else
-                character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
+for _, entry in ipairs(storyCoords) do
+    TeleportTab:CreateButton({
+        Name = "TP: " .. entry.name,
+        Callback = function()
+            local cf = stringToCFrame(entry.coord)
+            if cf then
+                teleportToTarget(cf, 0.1)
+                notify("Teleport", "Teletransportado a " .. entry.name, 2)
             end
-            notify("✅ Spawn", "Teletransportado", 2)
         end
-    end
-})
+    })
+end
 
 TeleportTab:CreateInput({
     Name = "📦 Teleport a Item",
@@ -1551,11 +3137,13 @@ TeleportTab:CreateDropdown({
     end
 })
 
+-- ═══════════════════════════════════════════════════════
 -- ⚙️ TAB: CONFIGURACIÓN
+-- ═══════════════════════════════════════════════════════
+
 local SettingsTab = Window:CreateTab("⚙️ Config")
 
 SettingsTab:CreateSection("🎨 Temas de la Interfaz")
-
 
 SettingsTab:CreateButton({
     Name = "🎲 Tema Aleatorio",
@@ -1619,15 +3207,7 @@ SettingsTab:CreateButton({
     end
 })
 
-SettingsTab:CreateButton({
-    Name = "💬 Discord",
-    Callback = function()
-        if setclipboard then
-            setclipboard("https://discord.gg/ZTVC94ZmVZ")
-        end
-        notify("💬 Discord", "Enlace copiado al portapapeles", 3)
-    end
-})
+
 
 SettingsTab:CreateSection("🛠️ Herramientas Adicionales")
 
@@ -1651,153 +3231,9 @@ SettingsTab:CreateButton({
         fullbrightEnabled = false
         wallHackEnabled = false
         autoClickEnabled = false
+        killAuraEnabled = false
         
         notify("✅ Limpieza", "Todas las funciones desactivadas", 3)
     end
 })
 
--- ═══════════════════════════════════════════════════════
--- 🎮 KEYBINDS GLOBALES
--- ═══════════════════════════════════════════════════════
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    
-    if input.KeyCode == Enum.KeyCode.F2 then
-        autoCollectItems()
-    elseif input.KeyCode == Enum.KeyCode.F3 then
-        noclipEnabled = not noclipEnabled
-        toggleNoclip(noclipEnabled)
-    elseif input.KeyCode == Enum.KeyCode.F4 then
-        flyEnabled = not flyEnabled
-        toggleFly(flyEnabled)
-    elseif input.KeyCode == Enum.KeyCode.F5 then
-        infiniteJumpEnabled = not infiniteJumpEnabled
-        toggleInfiniteJump(infiniteJumpEnabled)
-    elseif input.KeyCode == Enum.KeyCode.F6 then
-        fullbrightEnabled = not fullbrightEnabled
-        toggleFullbright(fullbrightEnabled)
-    elseif input.KeyCode == Enum.KeyCode.F7 then
-        autoFarmEnabled = not autoFarmEnabled
-        toggleAutoFarm(autoFarmEnabled)
-    elseif input.KeyCode == Enum.KeyCode.F8 then
-        antiAFKEnabled = not antiAFKEnabled
-        toggleAntiAFK(antiAFKEnabled)
-    end
-end)
-
--- ═══════════════════════════════════════════════════════
--- 🔄 ACTUALIZACIÓN DEL PERSONAJE AL RESPAWNEAR
--- ═══════════════════════════════════════════════════════
-
-player.CharacterAdded:Connect(function(newCharacter)
-    character = newCharacter
-    humanoid = character:WaitForChild("Humanoid")
-    originalWalkSpeed = humanoid.WalkSpeed
-    originalJumpPower = humanoid.JumpPower
-    
-    task.wait(1)
-    notify("🔄 Respawn", "Personaje recargado - Script listo", 3)
-end)
-
--- ═══════════════════════════════════════════════════════
--- 🎉 NOTIFICACIONES FINALES
--- ═══════════════════════════════════════════════════════
-
-
-
-task.wait(1)
-JmodsLib:Notify({
-    Title = "⌨️ Keybinds Rápidos",
-    Content = "F2: Collect | F3: Noclip | F4: Fly\nF5: InfJump | F6: Fullbright\nF7: Auto-Farm | F8: Anti-AFK",
-    Duration = 8
-})
-
-task.wait(8)
-JmodsLib:Notify({
-    Title = "📺 Suscríbete a joao_mods",
-    Content = "Más scripts en: https://youtube.com/@joao_mods0",
-    Duration = 10,
-    Image = 13458017478
-})
-
--- ═══════════════════════════════════════════════════════
--- 📊 SISTEMA DE DEBUG (OPCIONAL)
--- ═══════════════════════════════════════════════════════
-
-_G.JmodsHub = {
-    version = "2.0",
-    library = "JmodsLib",
-    game = "99 Noches en el Bosque",
-    author = "joao_mods",
-    status = {
-        noclip = function() return noclipEnabled end,
-        fly = function() return flyEnabled end,
-        autoFarm = function() return autoFarmEnabled end,
-        infiniteJump = function() return infiniteJumpEnabled end,
-        antiAFK = function() return antiAFKEnabled end,
-        fullbright = function() return fullbrightEnabled end,
-        wallhack = function() return wallHackEnabled end,
-        autoClick = function() return autoClickEnabled end
-    },
-    functions = {
-        notify = notify,
-        toggleFly = toggleFly,
-        toggleNoclip = toggleNoclip,
-        autoCollect = autoCollectItems,
-        createESP = createESP,
-        removeESP = removeESP,
-        toggleAutoFarm = toggleAutoFarm,
-        toggleFullbright = toggleFullbright,
-        toggleWallhack = toggleWallhack
-    },
-    connections = connections,
-    espObjects = espObjects
-}
-
-print("═══════════════════════════════════════════════════════")
-print("✅ JMODS HUB - 99 NOCHES EN EL BOSQUE v2.0")
-print("═══════════════════════════════════════════════════════")
-print("🎨 Interfaz: JmodsLib")
-print("👤 Creador: joao_mods")
-print("📺 YouTube: @joao_mods0")
-print("💬 Discord: discord.gg/ZTVC94ZmVZ")
-print("═══════════════════════════════════════════════════════")
-print("📋 FUNCIONES DISPONIBLES:")
-print("  ✓ Sistema de vuelo avanzado con velocidad ajustable")
-print("  ✓ Noclip para atravesar paredes")
-print("  ✓ Auto-Farm de items automático")
-print("  ✓ ESP para items, NPCs y jugadores")
-print("  ✓ Modificadores de velocidad y salto con sliders")
-print("  ✓ Sistema de teletransporte completo")
-print("  ✓ Herramientas de combate (Auto-Click, Invisibilidad)")
-print("  ✓ Efectos visuales (Fullbright, Wallhack)")
-print("  ✓ Anti-AFK automático")
-print("  ✓ Control de hora del día y niebla")
-print("  ✓ 24 temas personalizables con auto-guardado")
-print("  ✓ Abrir cofres instantáneamente")
-print("═══════════════════════════════════════════════════════")
-print("⌨️ KEYBINDS GLOBALES:")
-print("  F2 → Auto-Collect Items (una vez)")
-print("  F3 → Toggle Noclip")
-print("  F4 → Toggle Fly")
-print("  F5 → Toggle Infinite Jump")
-print("  F6 → Toggle Fullbright")
-print("  F7 → Toggle Auto-Farm")
-print("  F8 → Toggle Anti-AFK")
-print("  INSERT → Minimizar/Restaurar GUI")
-print("═══════════════════════════════════════════════════════")
-print("📑 TABS DISPONIBLES:")
-print("  🏠 Principal - Información y acciones rápidas")
-print("  🎮 Jugador - Modificadores y habilidades")
-print("  📦 Items - Gestión de items y auto-farm")
-print("  ⚔️ Combate - Herramientas de combate")
-print("  👁️ ESP - Sistema de visión mejorada")
-print("  🎨 Visual - Efectos visuales y personalización")
-print("  🌐 Teleport - Sistema de teletransporte")
-print("  ⚙️ Config - Configuración y créditos")
-print("═══════════════════════════════════════════════════════")
-print("✅ Script cargado correctamente - Sin errores")
-print("🎮 ¡Disfruta del hub y suscríbete a joao_mods!")
-print("💡 Usa _G.JmodsHub para acceder a funciones avanzadas")
-print("═══════════════════════════════════════════════════════")

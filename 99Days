@@ -1572,7 +1572,7 @@ ItemTab:CreateDropdown({
 -- ============================================
 -- BRING ITEM TO YOU (BULK)
 -- ============================================
-ItemTab:CreateSection("🎯 Traer Items a Ti (Bulk)")
+ItemTab:CreateSection("🎯 Traer Items a Ti")
 
 local possibleItems = {
     "Alien Chest", "Alpha Wolf Pelt", "Anvil Front", "Anvil Back", "Apple",
@@ -1807,7 +1807,7 @@ local autoBiofuelEnabledItems = {}
 local alwaysFeedEnabledItems = {}
 
 -- AUTO FEED CAMPFIRE (ALWAYS)
-AutoTab:CreateSection("🔥 Auto Feed Campfire (Siempre)")
+AutoTab:CreateSection("🔥 Auto Alimentar fogata (Siempre)")
 
 AutoTab:CreateParagraph({
     Title = "Modo Siempre Activo",
@@ -1816,7 +1816,7 @@ AutoTab:CreateParagraph({
 
 for _, itemName in ipairs(campfireFuelItems) do
     AutoTab:CreateToggle({
-        Name = "Always: " .. itemName,
+        Name = "Siempre tirar: " .. itemName,
         CurrentValue = false,
         Callback = function(checked)
             alwaysFeedEnabledItems[itemName] = checked
@@ -1841,7 +1841,7 @@ coroutine.wrap(function()
 end)()
 
 -- AUTO FEED CAMPFIRE (HP BASED)
-AutoTab:CreateSection("🔥 Auto Feed Campfire (HP Based)")
+AutoTab:CreateSection("🔥 Auto Alimentar fogata si baja a 70%")
 
 AutoTab:CreateParagraph({
     Title = "Modo Basado en HP",
@@ -1896,7 +1896,7 @@ coroutine.wrap(function()
 end)()
 
 -- AUTO COOK
-AutoTab:CreateSection("🍖 Auto Cook Food")
+AutoTab:CreateSection("🍖 Auto Cocinar")
 
 AutoTab:CreateParagraph({
     Title = "Auto Cocinar",
@@ -1905,7 +1905,7 @@ AutoTab:CreateParagraph({
 
 for _, itemName in ipairs(autocookItems) do
     AutoTab:CreateToggle({
-        Name = "Cook: " .. itemName,
+        Name = "Cocinar: " .. itemName,
         CurrentValue = false,
         Callback = function(checked)
             autoCookEnabledItems[itemName] = checked
@@ -1930,7 +1930,7 @@ coroutine.wrap(function()
 end)()
 
 -- AUTO GRIND MACHINE
-AutoTab:CreateSection("⚙️ Auto Machine Grind")
+AutoTab:CreateSection("⚙️ Auto Moler")
 
 AutoTab:CreateParagraph({
     Title = "Auto Moler",
@@ -1939,7 +1939,7 @@ AutoTab:CreateParagraph({
 
 for _, itemName in ipairs(autoGrindItems) do
     AutoTab:CreateToggle({
-        Name = "Grind: " .. itemName,
+        Name = "Moler: " .. itemName,
         CurrentValue = false,
         Callback = function(checked)
             autoGrindEnabledItems[itemName] = checked
@@ -2054,7 +2054,7 @@ end)()
 
 -- AUTO EAT (HP BAR BASED)
 AutoTab:CreateToggle({
-    Name = "Auto Eat (siempre al 100)",
+    Name = "Auto comer (siempre al 100)",
     CurrentValue = false,
     Callback = function(checked)
         autoEatHPEnabled = checked
@@ -2596,7 +2596,6 @@ PlayersTab:CreateToggle({
     end
 })
 
-PlayersTab:CreateSection("🔄 Actualización")
 
 PlayersTab:CreateParagraph({
     Title = "💡 Consejos",
@@ -2988,9 +2987,9 @@ VisualsTab:CreateSlider({
 })
 
 -- FOV CIRCLE
-VisualsTab:CreateSection("🎯 FOV Circle")
+VisualsTab:CreateSection("🎯 FOV ")
 
-local FOVCircle = Drawing.new("Circle")
+local FOVCircle = Drawing.new("Circulo")
 FOVCircle.Visible = false
 FOVCircle.Color = Color3.fromRGB(255, 255, 255)
 FOVCircle.Transparency = 1
@@ -3007,7 +3006,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 VisualsTab:CreateToggle({
-    Name = "Mostrar FOV Circle",
+    Name = "Mostrar FOV",
     CurrentValue = false,
     Callback = function(state)
         FOVCircle.Visible = state

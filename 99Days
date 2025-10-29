@@ -2781,8 +2781,6 @@ PlayersTab:CreateButton({
     end
 })
 
-
-
 -- Botón para traer solo los del TIPO seleccionado a ti
 PlayersTab:CreateButton({
     Name = "🎯 Traer Solo del Tipo Seleccionado",

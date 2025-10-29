@@ -560,34 +560,18 @@ end
 -- 🏠 TAB: PRINCIPAL
 local MainTab = Window:CreateTab("🏠 Principal")
 
-MainTab:CreateSection("📋 Información del Hub")
 
-MainTab:CreateParagraph({
-    Title = "J99",
-    Content = "joao_mods"
-})
-
-MainTab:CreateButton({
-    Name = "🎥 Visitar Canal de YouTube",
-    Callback = function()
-        notify("📺 YouTube", "Enlace copiado. Suscríbete: @joao_mods0", 5)
-        if setclipboard then
-            setclipboard("https://youtube.com/@joao_mods0")
-        end
-    end
-})
-
-MainTab:CreateButton({
-    Name = "💬 Discord",
-    Callback = function()
-        if setclipboard then
-            setclipboard("https://discord.gg/ZTVC94ZmVZ")
-        end
-        notify("💬 Discord", "Enlace copiado al portapapeles", 3)
-    end
-})
 
 MainTab:CreateSection("⚡ Acciones Rápidas")
+
+MainTab:CreateButton({
+    Name = "Inmortalidad / God Mode",
+    Callback = function()
+        local Event = game:GetService("ReplicatedStorage").RemoteEvents.DamagePlayer
+        Event:FireServer(-math.huge)
+    end
+})
+
 
 MainTab:CreateButton({
     Name = "📦 Recolectar Items Cercanos",
@@ -753,7 +737,7 @@ MainTab:CreateToggle({
 
 MainTab:CreateSlider({
     Name = "Radio de Kill Aura",
-    Range = {20, 500},
+    Range = {20, 1000},
     Increment = 5,
     CurrentValue = 200,
     Suffix = " studs",
@@ -2672,58 +2656,6 @@ PlayersTab:CreateButton({
     end
 })
 
--- ═══════════════════════════════════════════════════════
--- ⚔️ SECCIÓN: KILL AURA PARA JUGADOR
--- ═══════════════════════════════════════════════════════
-
-PlayersTab:CreateSection("⚔️ Kill Aura para Jugador")
-
-PlayersTab:CreateParagraph({
-    Title = "💡 Cómo Funciona",
-    Content = "El jugador seleccionado recibirá Kill Aura automático. Los NPCs CERCA DE ÉL serán atacados usando TUS herramientas."
-})
-
-PlayersTab:CreateToggle({
-    Name = "⚔️ Dar Kill Aura al Jugador",
-    CurrentValue = false,
-    Callback = function(state)
-        giveKillAuraEnabled = state
-        if state then
-            if not selectedTargetPlayer then
-                notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
-                giveKillAuraEnabled = false
-                return
-            end
-            
-            task.spawn(giveKillAuraLoop)
-            notify("⚔️ Kill Aura Activado", 
-                string.format("NPCs cerca de %s serán atacados - Radio: %d", selectedTargetPlayer.Name, giveKillAuraRadius), 3)
-        else
-            notify("⚔️ Kill Aura Desactivado", 
-                selectedTargetPlayer and ("Kill Aura removido de " .. selectedTargetPlayer.Name) or "Kill Aura desactivado", 2)
-        end
-    end
-})
-
-PlayersTab:CreateSlider({
-    Name = "⚔️ Radio de Kill Aura",
-    Range = {20, 500},
-    Increment = 5,
-    CurrentValue = 200,
-    Suffix = " studs",
-    Callback = function(value)
-        giveKillAuraRadius = value
-        if giveKillAuraEnabled and selectedTargetPlayer then
-            notify("⚔️ Radio Actualizado", 
-                string.format("Nuevo radio para %s: %d studs", selectedTargetPlayer.Name, value), 2)
-        end
-    end
-})
-
-PlayersTab:CreateParagraph({
-    Title = "⚠️ Nota Importante",
-    Content = "• Necesitas tener una herramienta de daño en TU inventario\n• Los mobs CERCA DEL JUGADOR SELECCIONADO serán atacados\n• NO ataca mobs cerca de ti, solo cerca de él\n• Funciona aunque estés muerto"
-})
 
 -- ═══════════════════════════════════════════════════════
 -- 👁️ SECCIÓN: ESPECTADOR
@@ -2775,10 +2707,6 @@ PlayersTab:CreateToggle({
 -- 💡 SECCIÓN: CONSEJOS
 -- ═══════════════════════════════════════════════════════
 
-PlayersTab:CreateParagraph({
-    Title = "💡 Consejos",
-    Content = "• Funciona incluso si estás muerto\n• El espectador se actualiza automáticamente\n• Los dropdowns se actualizan solos\n• Kill Aura ataca mobs CERCA DEL JUGADOR, no cerca de ti\n• Los items y NPCs se envían cerca del jugador seleccionado\n• Los NPCs Body son cuerpos de enemigos muertos"
-})
 
 -- ═══════════════════════════════════════════════════════
 -- 🔄 SISTEMA DE AUTO-ACTUALIZACIÓN

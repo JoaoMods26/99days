@@ -15,15 +15,69 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+
+-- 🔗 Variables que se actualizan con cada personaje
+local character
+local humanoid
+local connections = {}
+local espObjects = {}
 
 -- 🔗 Remote Events
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
--- 📊 Variables globales
-local connections = {}
-local espObjects = {}
+
+
+
+
+-- 🔄 Función para actualizar referencias del personaje
+local function updateCharacterReferences(newCharacter)
+    character = newCharacter
+    humanoid = character:WaitForChild("Humanoid")
+    
+    -- Restaurar WalkSpeed
+    if _G.HackedWalkSpeed then
+        humanoid.WalkSpeed = _G.HackedWalkSpeed
+        humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+            if humanoid.WalkSpeed ~= _G.HackedWalkSpeed then
+                humanoid.WalkSpeed = _G.HackedWalkSpeed
+            end
+        end)
+    end
+    
+    -- Restaurar Noclip si estaba activo
+    if noclipEnabled then
+        toggleNoclip(false)
+        task.wait(0.1)
+        toggleNoclip(true)
+    end
+    
+    -- Restaurar Fly si estaba activo
+    if flyEnabled then
+        toggleFly(false)
+        task.wait(0.1)
+        toggleFly(true)
+    end
+    
+    -- Restaurar Infinite Jump si estaba activo
+    if infiniteJumpEnabled then
+        toggleInfiniteJump(false)
+        task.wait(0.1)
+        toggleInfiniteJump(true)
+    end
+end
+
+-- Inicializar personaje
+character = player.Character or player.CharacterAdded:Wait()
+updateCharacterReferences(character)
+
+-- Detectar cuando el personaje respawnea
+player.CharacterAdded:Connect(function(newChar)
+    updateCharacterReferences(newChar)
+    notify("🔄 Personaje Actualizado", "Referencias restauradas", 2)
+end)
+
+
+
 
 -- Estados de funciones
 local noclipEnabled = false
@@ -121,18 +175,28 @@ local function teleportToTarget(cf, duration)
 end
 
 -- 🚀 FUNCIÓN: Toggle Fly
+-- 🚀 FUNCIÓN: Toggle Fly
 local function toggleFly(state)
     flyEnabled = state
     
     if flyEnabled then
+        -- Limpiar conexión anterior
         if connections.fly then
             connections.fly:Disconnect()
+            connections.fly = nil
         end
         
+        -- Verificar personaje
         if not character or not character:FindFirstChild("HumanoidRootPart") then
             flyEnabled = false
             notify("❌ Error", "Personaje no encontrado", 2)
             return
+        end
+        
+        -- Limpiar BodyVelocity anterior si existe
+        local oldBodyVel = character.HumanoidRootPart:FindFirstChild("BodyVelocity")
+        if oldBodyVel then
+            oldBodyVel:Destroy()
         end
         
         local bodyVelocity = Instance.new("BodyVelocity")
@@ -142,7 +206,13 @@ local function toggleFly(state)
         
         connections.fly = RunService.Heartbeat:Connect(function()
             if not flyEnabled or not character or not character:FindFirstChild("HumanoidRootPart") then
-                if bodyVelocity then bodyVelocity:Destroy() end
+                if bodyVelocity and bodyVelocity.Parent then 
+                    bodyVelocity:Destroy() 
+                end
+                if connections.fly then
+                    connections.fly:Disconnect()
+                    connections.fly = nil
+                end
                 return
             end
             
@@ -198,6 +268,7 @@ local function toggleNoclip(state)
     if noclipEnabled then
         if connections.noclip then
             connections.noclip:Disconnect()
+            connections.noclip = nil
         end
         
         connections.noclip = RunService.Stepped:Connect(function()
@@ -229,6 +300,7 @@ local function toggleNoclip(state)
     end
 end
 
+
 -- 🌟 FUNCIÓN: Toggle Salto Infinito
 local function toggleInfiniteJump(state)
     infiniteJumpEnabled = state
@@ -236,6 +308,7 @@ local function toggleInfiniteJump(state)
     if infiniteJumpEnabled then
         if connections.infJump then
             connections.infJump:Disconnect()
+            connections.infJump = nil
         end
         
         connections.infJump = UserInputService.JumpRequest:Connect(function()
@@ -531,18 +604,21 @@ local function killAuraLoop()
         if tool and damageID then
             equipTool(tool)
 
-            for _, mob in ipairs(characterFolder:GetChildren()) do
-                if mob:IsA("Model") then
-                    local part = mob:FindFirstChildWhichIsA("BasePart")
-                    if part and (part.Position - hrp.Position).Magnitude <= killAuraRadius then
-                        pcall(function()
-                            remoteEvents.ToolDamageObject:InvokeServer(
-                                mob,
-                                tool,
-                                damageID,
-                                CFrame.new(part.Position)
-                            )
-                        end)
+            local charactersFolder = workspace:FindFirstChild("Characters")
+            if charactersFolder then
+                for _, mob in ipairs(charactersFolder:GetChildren()) do
+                    if mob:IsA("Model") then
+                        local part = mob:FindFirstChildWhichIsA("BasePart")
+                        if part and (part.Position - hrp.Position).Magnitude <= killAuraRadius then
+                            pcall(function()
+                                remoteEvents.ToolDamageObject:InvokeServer(
+                                    mob,
+                                    tool,
+                                    damageID,
+                                    CFrame.new(part.Position)
+                                )
+                            end)
+                        end
                     end
                 end
             end
@@ -2610,16 +2686,12 @@ PlayersTab:CreateButton({
 })
 
 -- Botón para enviar TODOS los NPCs Body del mismo tipo
+-- Botón para enviar TODOS los NPCs Body del mismo tipo al jugador seleccionado
 PlayersTab:CreateButton({
-    Name = "💀 Enviar TODOS los NPCs Body del Mismo Tipo",
+    Name = "💀 Enviar TODOS los Body al Jugador",
     Callback = function()
         if not selectedTargetPlayer then
             notify("⚠️ Aviso", "Selecciona un jugador primero", 2)
-            return
-        end
-        
-        if not selectedNPCBody then
-            notify("⚠️ Aviso", "Selecciona un NPC Body primero", 2)
             return
         end
         
@@ -2635,10 +2707,11 @@ PlayersTab:CreateButton({
         end
         
         local npcsSent = 0
-        local targetName = selectedNPCBody:lower()
         
+        -- Buscar TODOS los NPCs que tengan "Body" en el nombre
         for _, npc in ipairs(charactersFolder:GetChildren()) do
-            if npc.Name:lower() == targetName then
+            local nameLower = npc.Name:lower()
+            if nameLower:find("body") then
                 local success = moveNPCToPlayer(npc, selectedTargetPlayer)
                 if success then
                     npcsSent = npcsSent + 1
@@ -2648,8 +2721,117 @@ PlayersTab:CreateButton({
         end
         
         if npcsSent > 0 then
-            notify("✅ NPCs Enviados", 
-                string.format("%d '%s' → %s", npcsSent, selectedNPCBody, selectedTargetPlayer.Name), 3)
+            notify("✅ NPCs Body Enviados", 
+                string.format("%d cuerpos → %s", npcsSent, selectedTargetPlayer.Name), 3)
+        else
+            notify("❌ Error", "No se encontraron NPCs con 'Body' en el nombre", 2)
+        end
+    end
+})
+
+-- Botón para traer TODOS los NPCs Body a TI
+PlayersTab:CreateButton({
+    Name = "🎯 Traer TODOS los Body a Mí",
+    Callback = function()
+        if not character or not character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "Personaje no encontrado", 2)
+            return
+        end
+        
+        local root = character.HumanoidRootPart
+        local charactersFolder = workspace:FindFirstChild("Characters")
+        if not charactersFolder then
+            notify("❌ Error", "Carpeta 'Characters' no encontrada", 2)
+            return
+        end
+        
+        local npcsBrought = 0
+        
+        -- Buscar TODOS los NPCs que tengan "Body" en el nombre
+        for _, npc in ipairs(charactersFolder:GetChildren()) do
+            local nameLower = npc.Name:lower()
+            if nameLower:find("body") then
+                local npcPart = npc.PrimaryPart or npc:FindFirstChildWhichIsA("BasePart")
+                if npcPart then
+                    -- Establecer PrimaryPart si no existe
+                    if not npc.PrimaryPart then
+                        pcall(function() npc.PrimaryPart = npcPart end)
+                    end
+                    
+                    pcall(function()
+                        remoteEvents.RequestStartDraggingItem:FireServer(npc)
+                        task.wait(0.05)
+                        npc:SetPrimaryPartCFrame(CFrame.new(root.Position + Vector3.new(math.random(-5,5), 5, math.random(-5,5))))
+                        task.wait(0.05)
+                        remoteEvents.StopDraggingItem:FireServer(npc)
+                    end)
+                    
+                    npcsBrought = npcsBrought + 1
+                    task.wait(0.1)
+                end
+            end
+        end
+        
+        if npcsBrought > 0 then
+            notify("✅ NPCs Body Traídos", 
+                string.format("Se trajeron %d cuerpos a ti", npcsBrought), 3)
+        else
+            notify("❌ Error", "No se encontraron NPCs con 'Body' en el nombre", 2)
+        end
+    end
+})
+
+
+
+-- Botón para traer solo los del TIPO seleccionado a ti
+PlayersTab:CreateButton({
+    Name = "🎯 Traer Solo del Tipo Seleccionado",
+    Callback = function()
+        if not selectedNPCBody then
+            notify("⚠️ Aviso", "Selecciona un NPC Body primero", 2)
+            return
+        end
+        
+        if not character or not character:FindFirstChild("HumanoidRootPart") then
+            notify("❌ Error", "Personaje no encontrado", 2)
+            return
+        end
+        
+        local root = character.HumanoidRootPart
+        local charactersFolder = workspace:FindFirstChild("Characters")
+        if not charactersFolder then
+            notify("❌ Error", "Carpeta 'Characters' no encontrada", 2)
+            return
+        end
+        
+        local npcsBrought = 0
+        local targetName = selectedNPCBody:lower()
+        
+        for _, npc in ipairs(charactersFolder:GetChildren()) do
+            if npc.Name:lower() == targetName then
+                local npcPart = npc.PrimaryPart or npc:FindFirstChildWhichIsA("BasePart")
+                if npcPart then
+                    if not npc.PrimaryPart then
+                        pcall(function() npc.PrimaryPart = npcPart end)
+                    end
+                    
+                    pcall(function()
+                        remoteEvents.RequestStartDraggingItem:FireServer(npc)
+                        task.wait(0.05)
+                        npc:SetPrimaryPartCFrame(CFrame.new(root.Position + Vector3.new(math.random(-5,5), 5, math.random(-5,5))))
+                        task.wait(0.05)
+                        remoteEvents.StopDraggingItem:FireServer(npc)
+                    end)
+                    
+                    npcsBrought = npcsBrought + 1
+                    task.wait(0.1)
+                end
+            end
+        end
+        
+        if npcsBrought > 0 then
+            notify("✅ NPCs Traídos", 
+                string.format("Se trajeron %d '%s' a ti", npcsBrought, selectedNPCBody), 3)
         else
             notify("❌ Error", "No se encontró ningún " .. selectedNPCBody, 2)
         end

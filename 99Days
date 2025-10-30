@@ -1845,6 +1845,99 @@ AutoTab:CreateParagraph({
     Content = "Sistema completo de automatización para fogata, cocina, máquina de moler y más"
 })
 
+
+
+
+-- Función click-- Services
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer = Players.LocalPlayer
+
+-- Variables
+local AutoTreeFarmEnabled = false
+local badTrees = {}
+local ignoreDistanceFrom = Vector3.new(0, 0, 0)
+local minDistance = 50
+function mouse1click()
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+-- Lógica Auto Tree Farm
+task.spawn(function()
+    while true do
+        if AutoTreeFarmEnabled then
+            local trees = {}
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj.Name == "Trunk" and obj.Parent and obj.Parent.Name == "Small Tree" then
+                    local distance = (obj.Position - ignoreDistanceFrom).Magnitude
+                    if distance > minDistance and not badTrees[obj:GetFullName()] then
+                        table.insert(trees, obj)
+                    end
+                end
+            end
+
+            table.sort(trees, function(a, b)
+                return (a.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <
+                       (b.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            end)
+
+            for _, trunk in ipairs(trees) do
+                if not AutoTreeFarmEnabled then break end
+                local character = LocalPlayer.Character
+                local hrp = character and character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.Anchored = false
+                    task.wait(0.05)
+                    LocalPlayer.Character:PivotTo(trunk.CFrame + Vector3.new(0, 3, 0))
+                    task.wait(0.1)
+                    hrp.Anchored = true
+                end
+                task.wait(0.2)
+                local startTime = tick()
+                while AutoTreeFarmEnabled and trunk and trunk.Parent and trunk.Parent.Name == "Small Tree" do
+                    mouse1click()
+                    task.wait(0.2)
+                    if tick() - startTime > 12 then
+                        badTrees[trunk:GetFullName()] = true
+                        break
+                    end
+                end
+                task.wait(0.3)
+            end
+        end
+        task.wait(1.5)
+    end
+end)
+
+-- Toggle
+AutoTab:CreateToggle({
+    Name = "Auto Tree Farm (Small Tree)",
+    CurrentValue = false,
+    Callback = function(value)
+        AutoTreeFarmEnabled = value
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            if humanoid and hrp then
+                if value then
+                    humanoid.WalkSpeed = 0
+                    humanoid.JumpPower = 0
+                    hrp.Anchored = true
+                else
+                    humanoid.WalkSpeed = 16
+                    humanoid.JumpPower = 50
+                    hrp.Anchored = false
+                end
+            end
+        end
+    end
+})
+
+
+
+
 -- Listas de items
 local campfireFuelItems = {"Log", "Coal", "Fuel Canister", "Oil Barrel", "Biofuel"}
 local autocookItems = {"Morsel", "Steak"}

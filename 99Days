@@ -3389,43 +3389,6 @@ VisualsTab:CreateSlider({
     end
 })
 
--- FOV CIRCLE
-VisualsTab:CreateSection("🎯 FOV ")
-
-local FOVCircle = Drawing.new("Circulo")
-FOVCircle.Visible = false
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Transparency = 1
-FOVCircle.Thickness = 1
-FOVCircle.Filled = false
-FOVCircle.ZIndex = 2
-local FOVRadius = 100
-
-RunService.RenderStepped:Connect(function()
-    if FOVCircle.Visible then
-        FOVCircle.Radius = FOVRadius
-        FOVCircle.Position = UserInputService:GetMouseLocation()
-    end
-end)
-
-VisualsTab:CreateToggle({
-    Name = "Mostrar FOV",
-    CurrentValue = false,
-    Callback = function(state)
-        FOVCircle.Visible = state
-    end
-})
-
-VisualsTab:CreateSlider({
-    Name = "Radio del FOV",
-    Range = {50, 360},
-    Increment = 5,
-    CurrentValue = 100,
-    Suffix = "px",
-    Callback = function(value)
-        FOVRadius = value
-    end
-})
 
 -- ═══════════════════════════════════════════════════════
 -- 🌍 TAB: TELETRANSPORTE
